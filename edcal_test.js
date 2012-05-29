@@ -24,9 +24,17 @@ var edcal_test = {
 
     testContent: 'This is the content of the <b>unit test &#8211 post</b>. <!--more--> This is content after the more tag to make sure we a reading it.',
     testContent2: 'This is the content of the <b>unit test &#8211 post</b>. <!--more--> This is content after the more tag to make sure we a reading it. - CHANGED',
-
+    testContent3: 'This is the content of the <b>unit test &#8211 post</b>. <!--more--> This is content after the more tag to make sure we a reading it. - CHANGED DRAFT',
 
     runTests: function() {
+        edcal_test.isDraftsDrawerVisible = edcal.isDraftsDrawerVisible;
+        
+        edcal.setDraftsDrawerVisible(true, function() {
+            edcal_test.startTests();
+        });
+    },
+
+    startTests: function() {
         jQuery('head').append('<link>');
         css = jQuery('head').children(':last');
         css.attr({
@@ -261,6 +269,92 @@ var edcal_test = {
 
                  start();
 
+                 edcal_test.testMovePostDraft();
+             });
+         });
+
+    },
+
+    testMovePostDraft: function() {
+
+         asyncTest('Move an existing post to the drafts drawer', function() {
+             expect(2);
+
+             edcal.doDrop(edcal_test.post.date, 'post-' + edcal_test.post.id, edcal.NO_DATE, function(res) {
+
+                 if (!res.post) {
+                     ok(false, 'There was an error creating the new post.');
+                     return;
+                 }
+
+                 equals(res.post.date_gmt, edcal.NO_DATE, 'The resulting post should have the same date as the request and it was ' + res.post.date);
+
+                 equals(jQuery('#post-' + res.post.id).length, 1, 'The post should be added in only one place in the calendar.');
+
+                 edcal_test.post = res.post;
+
+                 start();
+
+                 edcal_test.testEditPostDraft();
+             });
+         });
+
+    },
+    
+    testEditPostDraft: function() {
+
+         asyncTest('Edit the content of a draft post', function() {
+             expect(2);
+             
+             edcal_test.post.title = 'Unit Test Draft Post &#8211 Changed';
+             edcal_test.post.content = edcal_test.testContent3;
+
+             edcal.savePost(edcal_test.post, false, false, function(res)
+                {
+                    if (!res.post) {
+                        ok(false, 'There was an error editing the post.');
+                        start();
+                        return;
+                    }
+
+                    equals(res.post.title, edcal_test.post.title, 'The resulting post should have the same title as the request');
+                    
+                    equals(jQuery('#post-' + res.post.id).length, 1, 'The post should be added in only one place in the calendar.');
+
+                    edcal_test.post = res.post;
+
+                    start();
+
+                    edcal_test.testMovePostDraftSchedule();
+
+                });
+         });
+    },
+    
+    testMovePostDraftSchedule: function() {
+
+         asyncTest('Move a post from the drafts drawer back to the calendar', function() {
+             expect(2);
+
+             // We added the post one week in the future, now we will move it
+             // two days after that.
+             var newDate = Date.today().add(23).days().toString(edcal.internalDateFormat);
+
+             edcal.doDrop(edcal.NO_DATE, 'post-' + edcal_test.post.id, newDate, function(res) {
+
+                 if (!res.post) {
+                     ok(false, 'There was an error creating the new post.');
+                     return;
+                 }
+
+                 equals(res.post.date, newDate, 'The resulting post should have the same date as the request and it was ' + res.post.date);
+
+                 equals(jQuery('#post-' + res.post.id).length, 1, 'The post should be added in only one place in the calendar.');
+
+                 edcal_test.post = res.post;
+
+                 start();
+
                  edcal_test.testEditPost();
              });
          });
@@ -374,8 +468,22 @@ var edcal_test = {
 
                     equals(jQuery('#post-' + res.post.id).length, 0, 'The post should now be deleted from the calendar.');
                     start();
+                    
+                    edcal_test.finishTests();
 
                 });
          });
+    },
+    
+    finishTests: function() {
+        if (!edcal_test.isDraftsDrawerVisible) {
+            /*
+             * We need to make sure the drafts drawer is open because
+             * we can use it in the tests so we open it when the tests
+             * start if it isn't open already.  We want to close it at
+             * the end if we opened it.
+             */
+            edcal.setDraftsDrawerVisible(false);
+        }
     }
 };

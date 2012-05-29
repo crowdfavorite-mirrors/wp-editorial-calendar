@@ -64,6 +64,12 @@
 var edcal = {
 
     /*
+       This final string represents the date which indicates to WordPress
+       that a post doesn't have a date.
+    */
+    NO_DATE: '00000000',
+
+    /*
        This value is the number of weeks the user wants to see at one time
        in the calendar.
      */
@@ -205,8 +211,324 @@ var edcal = {
        any flickering.
      */
     windowHeight: 0,
-        
+
+    
+    /*
+       This variable indicates if the calendar is in left to right or right to 
+       left display mode.
+    */    
     ltr: 'ltr',
+
+    /*
+       This variable indicates if the drafts drawer is visible or not.
+    */
+    isDraftsDrawerVisible: false,
+
+    /*
+     * Initializes the calendar
+     */
+    init: function() {
+         if (jQuery('#edcal_scrollable').length === 0) {
+             /*
+              * This means we are on a page without the editorial
+              * calendar
+              */
+             return;
+         }
+
+        edcal.addFeedbackSection();
+        
+        var draftsDrawerVisible = jQuery.cookie('edcal_drafts_drawer');
+        if (draftsDrawerVisible === 'true') {
+            edcal.isDraftsDrawerVisible = true;
+            edcal.setDraftsDrawerVisible(edcal.isDraftsDrawerVisible);
+        }
+
+        jQuery('#loading').hide();
+
+        jQuery('#edcal_scrollable').css('height', edcal.getCalHeight() + 'px');
+        edcal.windowHeight = jQuery(window).height();
+
+        /*
+         *  Add the days of the week
+         */
+        edcal.createDaysHeader();
+
+        /*
+         * We start by initializting the scrollable.  We use this to manage the
+         * scrolling of the calendar, but don't actually call it to animate the
+         * scrolling.  We specify an easing here because the default is "swing"
+         * and that has a conflict with JavaScript used in the BuddyPress plugin/
+         *
+         * This doesn't really change anything since the animation happens offscreen.
+         */
+        jQuery('#edcal_scrollable').scrollable({
+                                    vertical: true,
+                                    size: edcal.weeksPref,
+                                    keyboard: false,
+                                    keyboardSteps: 1,
+                                    speed: 100,
+                                    easing: 'linear'
+                                    });
+
+        var api = jQuery('#edcal_scrollable').scrollable();
+        
+        api.getConf().keyboard = false;
+
+        /*
+           When the user moves the calendar around we remember their
+           date and save it in a cookie.  Then we read the cookie back
+           when we reload so the calendar stays where the user left
+           it last.
+         */
+        var curDate = jQuery.cookie('edcal_date');
+
+        if (curDate) {
+            curDate = Date.parseExact(curDate, 'yyyy-dd-MM');
+            edcal.output('Resetting to date from the edcal_Date cookie: ' + curDate);
+        } else {
+            curDate = Date.today();
+        }
+
+        edcal.moveTo(curDate.clone());
+        
+        jQuery('#edcal_scrollable').bind('mousewheel', function(event, delta) {
+            var dir = delta > 0 ? false : true, vel = Math.abs(delta);
+            edcal.output(dir + ' at a velocity of ' + vel);
+
+            if (!edcal.isMoving && vel > 0.2) {
+                edcal.move(1, dir);
+            }
+            
+            return false;
+        });
+        
+        /*
+           We are handling all of our own events so we just cancel all events from
+           the scrollable.
+         */
+        api.onBeforeSeek(function(evt, direction) {
+            return false;
+        });
+
+        /*
+         * We also want to listen for a few other key events
+         */
+        jQuery(document).bind('keydown', function(evt) {
+            //if (evt.altKey || evt.ctrlKey) { return; }
+            //edcal.output("evt.altKey: " + evt.altKey);
+            //edcal.output("evt.keyCode: " + evt.keyCode);
+            //edcal.output("evt.ctrlKey: " + evt.ctrlKey);
+            
+            if (evt.keyCode === 27) { //escape key
+                edcal.hideForm();
+                return false;
+            }
+            
+            if (jQuery('#edcal_quickedit').is(':visible')) {
+                return;
+            }
+
+            if ((evt.keyCode === 40 && !(evt.altKey || evt.ctrlKey))) {        // down arrow key
+                edcal.move(1, true);
+                return false;
+            } else if ((evt.keyCode === 38 && !(evt.altKey || evt.ctrlKey))) { // up arrow key
+                edcal.move(1, false);
+                return false;
+            } else if ((evt.keyCode === 34 && !(evt.altKey || evt.ctrlKey)) || //page down
+                evt.keyCode === 40 && evt.ctrlKey) {                           // Ctrl+down down arrow
+                edcal.move(edcal.weeksPref, true);
+                return false;
+            } else if ((evt.keyCode === 33 && !(evt.altKey || evt.ctrlKey)) || //page up
+                evt.keyCode === 38 && evt.ctrlKey) {                           // Ctrl+up up arrow
+                edcal.move(edcal.weeksPref, false);
+                return false;
+            }
+        });
+        
+        edcal.getPosts(edcal.nextStartOfWeek(curDate).add(-3).weeks(),
+                       edcal.nextStartOfWeek(curDate).add(edcal.weeksPref + 3).weeks());
+        
+        /*
+           Now we bind the listeners for all of our links and the window
+           resize.
+         */
+        jQuery('#moveToToday').click(function() {
+            edcal.moveTo(Date.today());
+            edcal.getPosts(edcal.nextStartOfWeek(Date.today()).add(-3).weeks(),
+                           edcal.nextStartOfWeek(Date.today()).add(edcal.weeksPref + 3).weeks());
+            return false;
+        });
+        
+        jQuery('#prevmonth').click(function() {
+            edcal.move(edcal.weeksPref, false);
+            return false;
+        });
+
+        jQuery('#nextmonth').click(function() {
+            edcal.move(edcal.weeksPref, true);
+            return false;
+        });
+        
+        /*
+           We used to listen to resize events so we could make the calendar the right size
+           for the current window when it changed size, but this was causing a problem with
+           WordPress 3.3 and it never worked properly because the scroll position was a little
+           off so we are just skipping it.
+         */
+        /*function resizeWindow(e) {
+            if (edcal.windowHeight != jQuery(window).height()) {
+                jQuery('#edcal_scrollable').css('height', edcal.getCalHeight() + 'px');
+                edcal.windowHeight = jQuery(window).height();
+                edcal.savePosition();
+            }
+        }
+        jQuery(window).bind('resize', resizeWindow);*/
+
+        jQuery('#newPostScheduleButton').live('click', function(evt) {
+            // if the button is disabled, don't do anything
+            if (jQuery(this).hasClass('disabled')) {
+                return false;
+            }
+            // Otherwise,
+            // make sure we can't make duplicate posts by clicking twice quickly
+            jQuery(this).addClass('disabled');
+            // and save the post
+            return edcal.savePost(null, false, true);
+        });
+
+        jQuery('#edcal-title-new-field').bind('keyup', function(evt) {
+            if (jQuery('#edcal-title-new-field').val().length > 0 && jQuery('#edcal-time').val().length > 0) {
+                jQuery('#newPostScheduleButton').removeClass('disabled');
+            } else {
+                jQuery('#newPostScheduleButton').addClass('disabled');
+            }
+
+            if (evt.keyCode == 13) {    // enter key
+                /*
+                 * If the user presses enter we want to save the draft.
+                 */
+                return edcal.savePost(null, true);
+            }
+        });
+
+        jQuery('#edcal-status').bind('change', function(evt) {
+            edcal.updatePublishButton();
+        });
+
+        jQuery('#edcal_weeks_pref').live('keyup', function(evt) {
+            if (jQuery('#edcal_weeks_pref').val().length > 0) {
+                jQuery('#edcal_applyoptions').removeClass('disabled');
+            } else {
+                jQuery('#edcal_applyoptions').addClass('disabled');
+            }
+
+            if (evt.keyCode == 13) {    // enter key
+                edcal.saveOptions();
+            }
+
+        });
+
+        edcal.savePosition();
+
+        edcal.addOptionsSection();
+
+        jQuery('#edcal-time').timePicker({
+            show24Hours: edcal.timeFormat === 'H:i',
+            separator: ':',
+            step: 30
+        });
+
+        jQuery('#showdraftsdrawer').click(function() {
+            edcal.setDraftsDrawerVisible(!edcal.isDraftsDrawerVisible);
+        });
+    },
+
+    /*
+     * This function shows and hides the drafts drawer. Kind of clunky right now.
+     * Inits [loads content] only once. 
+     */
+    setDraftsDrawerVisible: function(/*boolean*/ visible, /*function*/ callback) {
+        var drawerwidth = '13%';
+        var drawerwidthmargin = '13.5%';
+        var showhideElement = jQuery('#showdraftsdrawer');
+        /* tells us if the drafts have been loaded for the first time */
+        if (!showhideElement.hasClass('isLoaded')) {
+            showhideElement.addClass('isLoaded');
+            edcal.setupDraftsdrawer(callback);
+        } else if (callback) {
+            /*
+             * If the drawer was already open we just call the callback
+             */
+            callback();
+        }
+
+        if (visible) {
+            // edcal.output('showing draftsdrawer');
+            jQuery('#cal_cont').css({ 'margin-right': drawerwidthmargin });
+            jQuery('#draftsdrawer_cont').css({ display:'block', width:drawerwidth });
+            showhideElement.html(edcal.str_hidedrafts);
+        } else {		
+            // edcal.output('hiding draftsdrawer');
+            jQuery('#cal_cont').css({ 'margin-right': '0' });
+            jQuery('#draftsdrawer_cont').css({ display:'none', width:'0' });
+            showhideElement.html(edcal.str_showdrafts);
+        }
+
+        edcal.isDraftsDrawerVisible = visible;
+        
+        jQuery.cookie('edcal_drafts_drawer', visible, {expires: 2060});
+    },
+
+    /*
+     * Sets up the drafts drawer.
+     */
+    setupDraftsdrawer: function(/*function*/ callback) {
+        jQuery('#draftsdrawer_loading').css({display:'block'});
+        edcal.getPosts(edcal.NO_DATE, null, function() {
+            edcal.initDraftsdrawer();
+            if (callback) {
+                callback();
+            }
+        });
+    },
+
+    /*
+     * Inits the drafts drawer, much like edcal.createRow()
+     * We could paginate this but right now we're just loading them all.
+     */
+    initDraftsdrawer: function() {
+        var newrow = '';
+        
+        newrow += '<a href="#" adddate="' + edcal.NO_DATE + '" class="daynewlink" style="margin-top: 5px;"' + 
+            'title="' + edcal.str_newdraft + '" id="unscheduledNewLink" ' + 
+            'onclick="edcal.addDraft(); return false;">' + edcal.str_addDraftLink + '</a>';
+
+        newrow += '<ul class="postlist">';
+
+        newrow += edcal.getPostItems(edcal.NO_DATE);
+
+        newrow += '</ul>';
+
+        edcal.draggablePost('#row' + edcal._wDate.toString(edcal.internalDateFormat) + ' li.post');
+
+        edcal.makeDroppable(jQuery('#draftsdrawer div.day'));
+        
+        jQuery('#unscheduled').append(newrow);
+        jQuery('#draftsdrawer_loading').css({display:'none'});
+        
+        var cal_cont = jQuery('#cal_cont');
+        
+        jQuery('#unscheduled ul.postlist').css('min-height', ((cal_cont.height() - 10) - 
+                                               jQuery('#draftsdrawer .draftsdrawerheadcont').height()) - 
+                                               jQuery('#unscheduledNewLink').outerHeight());
+        
+        jQuery('#unscheduled').mouseout(function() {
+            jQuery('#unscheduledNewLink').hide();
+        }).mouseover(function() {
+            jQuery('#unscheduledNewLink').show();
+        });
+	},
 
     /*
        This function aligns the grid in two directions.  There
@@ -214,10 +536,14 @@ var edcal = {
        grid for each week with a list of days.
      */
     alignGrid: function(/*string*/ gridid, /*int*/ cols, /*int*/ cellWidth, /*int*/ cellHeight, /*int*/ padding) {
+        if (jQuery(gridid).parent().attr('id')=='draftsdrawer') {
+            return;
+        }
+        
         var x = 0;
         var y = 0;
         var count = 1;
-        
+
         jQuery(gridid).each(function() {
             jQuery(this).css('position', 'relative');
             
@@ -469,7 +795,16 @@ var edcal = {
 
         edcal.draggablePost('#row' + edcal._wDate.toString(edcal.internalDateFormat) + ' li.post');
 
-        jQuery('#row' + edcal._wDate.toString(edcal.internalDateFormat) + ' > div > div.day').droppable({
+        edcal.makeDroppable(jQuery('#row' + edcal._wDate.toString(edcal.internalDateFormat) + ' > div > div.day'));
+
+        return jQuery('row' + edcal._wDate.toString(edcal.internalDateFormat));
+    },
+    
+    /*
+     * Make a specific post droppable
+     */
+    makeDroppable: function(/*jQuery*/ day) {
+        day.droppable({
             hoverClass: 'day-active',
             accept: function(ui) {
                 /*
@@ -492,23 +827,21 @@ var edcal = {
             greedy: true,
             tolerance: 'pointer',
             drop: function(event, ui) {
-                           //output('dropped ui.draggable.attr("id"): ' + ui.draggable.attr("id"));
-                           //output('dropped on jQuery(this).attr("id"): ' + jQuery(this).attr("id"));
-                           //output('ui.draggable.html(): ' + ui.draggable.html());
-
-                           var dayId = ui.draggable.parent().parent().parent().attr('id');
-
-                           edcal.doDrop(dayId, ui.draggable.attr('id'), jQuery(this).attr('id'));
-                        }
+                   //edcal.output('dropped ui.draggable.attr("id"): ' + ui.draggable.attr("id"));
+                   //edcal.output('dropped on jQuery(this).attr("id"): ' + jQuery(this).attr("id"));
+                   //edcal.output('ui.draggable.html(): ' + ui.draggable.html());
+                   var dayId = ui.draggable.parent().parent().parent().attr('id');
+                   //edcal.output('dayId: ' + dayId);
+                   edcal.doDrop(dayId, ui.draggable.attr('id'), jQuery(this).attr('id'));
+                }
             });
-
-        return jQuery('row' + edcal._wDate.toString(edcal.internalDateFormat));
     },
 
     /*
      * Handle the drop when a user drags and drops a post.
      */
     doDrop: function(/*string*/ parentId, /*string*/ postId, /*string*/ newDate, /*function*/ callback) {
+         //edcal.output('doDrop(' + parentId + ', ' + postId + ', ' + newDate + ')');
          var dayId = parentId;
 
 
@@ -541,6 +874,7 @@ var edcal = {
          }, 500);
 
          // Step 3. Add the item to the new DOM parent
+         // Step 3a. Check whether we dropped it on a day or on the Drafts Drawer
          jQuery('#' + newDate + ' .postlist').append(edcal.createPostItem(post, newDate));
 
          
@@ -593,7 +927,12 @@ var edcal = {
        scrolling the calendar when that happens.
      */
     handleDrag: function(event, ui) {
-         if (edcal.isMoving || edcal.isDragScrolling) {
+         if (edcal.isMoving || edcal.isDragScrolling
+             /*
+                TODO: make sure that if we are on top of the drafts drawer
+                we don't dragScroll.
+             */
+             ) {
              return;
          }
 
@@ -652,12 +991,13 @@ var edcal = {
           * be much more adaptable to reference the class by name, but this is
           * significantly faster.  Especially on IE.
           */
+         // edcal.output('post.id: '+post.id+'\ndayobjId: '+dayobjId);
          jQuery('#' + dayobjId + ' > div > ul').append(edcal.createPostItem(post, dayobjId));
     },
 
     /*
        Makes all the posts in the specified day draggable
-       and adds the tooltip.
+       and adds the edcal_quickedit.
      */
     addPostItemDragAndToolltip: function(/*string*/ dayobjId) {
          edcal.draggablePost('#' + dayobjId + ' > div > ul > li');
@@ -678,7 +1018,12 @@ var edcal = {
             timeout: 100000,
             dataType: 'json',
             success: function(res) {
-                edcal.removePostItem(res.post.date, 'post-' + res.post.id);
+                if (res.post.date_gmt === edcal.NO_DATE) {
+                    edcal.removePostItem(res.post.date_gmt, 'post-' + res.post.id);
+                } else {
+                    edcal.removePostItem(res.post.date, 'post-' + res.post.id);
+                }
+                
                 if (res.error) {
                     /*
                      * If there was an error we need to remove the dropped
@@ -703,8 +1048,6 @@ var edcal = {
             }
         });
     },
-
-
 
 
     /*
@@ -753,6 +1096,24 @@ var edcal = {
             date: date,
             formatteddate: edcal.getDayFromDayId(date).toString(edcal.previewDateFormat),
             time: formattedtime
+        };
+        edcal.showForm(post);
+        return false;
+    },
+    
+    /*
+     * Called when the "Add a draft" link is clicked.
+     * Sets up a post object and displays the add form
+     */
+    addDraft: function() {
+        jQuery('#newPostScheduleButton').addClass('disabled');
+
+        var post = {
+            id: 0,
+            date: Date.today(),
+            formatteddate: edcal.NO_DATE,
+            time: edcal.NO_DATE,
+            status: 'draft'
         };
         edcal.showForm(post);
         return false;
@@ -816,16 +1177,26 @@ var edcal = {
          } else {
             time = Date.parse('10:00:00'); // If we don't have a time set, default it to 10am
          }
-
-         var formattedtime = time.format('H:i:s');
-
-         var formattedDate = encodeURIComponent(edcal.getDayFromDayId(post.date).toString(edcal.wp_dateFormat) + ' ' + formattedtime);
+         
+         var formattedDate;
+         
+         if (time !== null && time !== edcal.NO_DATE) {
+             var formattedtime = time.format('H:i:s');
+             formattedDate = encodeURIComponent(edcal.getDayFromDayId(post.date).toString(edcal.wp_dateFormat) + ' ' + formattedtime);
+         } else {
+             formattedDate = encodeURIComponent(post.date.toString(edcal.wp_dateFormat + ' H:i:s'));
+         }
+         
          var url = edcal.ajax_url() + '&action=edcal_savepost';
          var postData = 'date=' + formattedDate +
                        '&title=' + encodeURIComponent(post.title) +
                        '&content=' + encodeURIComponent(post.content) +
                        '&id=' + encodeURIComponent(post.id) +
                        '&status=' + encodeURIComponent(post.status);
+         
+         if (time === null || time === edcal.NO_DATE) {
+             postData += '&date_gmt=' + encodeURIComponent('0000-00-00 00:00:00');
+         }
 
          if (edcal.getUrlVars().post_type) {
              postData += '&post_type=' + encodeURIComponent(edcal.getUrlVars().post_type);
@@ -844,7 +1215,7 @@ var edcal = {
             dataType: 'json',
             success: function(res) {
                 jQuery('#edit-slug-buttons').removeClass('tiploading');
-                jQuery('#tooltip').hide();
+                jQuery('#edcal_quickedit').hide();
                 jQuery('#edcal_scrollable').data('scrollable').getConf().keyboard = true;
                 if (res.error) {
                     /*
@@ -868,12 +1239,18 @@ var edcal = {
                         window.location = res.post.editlink.replace('&amp;', '&');
                     } else {
 
+                        var date = res.post.date;
+                        
+                        if (res.post.date_gmt === edcal.NO_DATE) {
+                            date = res.post.date_gmt;
+                        }
+                        
                         if (res.post.id) {
-                            edcal.removePostItem(res.post.date, 'post-' + res.post.id);
+                            edcal.removePostItem(date, 'post-' + res.post.id);
                         }
 
-                        edcal.addPostItem(res.post, res.post.date);
-                        edcal.addPostItemDragAndToolltip(res.post.date);
+                        edcal.addPostItem(res.post, date);
+                        edcal.addPostItemDragAndToolltip(date);
                     }
                 }
 
@@ -885,7 +1262,7 @@ var edcal = {
             },
             error: function(xhr) {
                  jQuery('#edit-slug-buttons').removeClass('tiploading');
-                 jQuery('#tooltip').hide();
+                 jQuery('#edcal_quickedit').hide();
                  jQuery('#edcal_scrollable').data('scrollable').getConf().keyboard = true;
                  edcal.showError(edcal.general_error);
                  if (xhr.responseText) {
@@ -902,7 +1279,7 @@ var edcal = {
     serializePost: function() {
         var post = {};
 
-        jQuery('#tooltip').find('input, textarea, select').each(function() {
+        jQuery('#edcal_quickedit').find('input, textarea, select').each(function() {
             post[this.name] = this.value;
         });
         return post;
@@ -913,13 +1290,23 @@ var edcal = {
      */
     showForm: function(post) {
         edcal.resetForm();
+        
+        if (post.formatteddate === edcal.NO_DATE || post.date_gmt === edcal.NO_DATE) {
+            jQuery('#timeEditControls').hide();
+        } else {
+            jQuery('#timeEditControls').show();
+        }
 
         // show tooltip
-        jQuery('#tooltip').center().show();
+        jQuery('#edcal_quickedit').center().show();
         jQuery('#edcal_scrollable').data('scrollable').getConf().keyboard = false;
 
         if (!post.id) {
-            jQuery('#tooltiptitle').text(edcal.str_newpost_title + post.formatteddate);
+            if (post.formatteddate === edcal.NO_DATE) {
+                jQuery('#tooltiptitle').text(edcal.str_newdraft_title);
+            } else {
+                jQuery('#tooltiptitle').text(edcal.str_newpost_title + post.formatteddate);
+            }
         } else {
             jQuery('#tooltiptitle').text(sprintf(edcal.str_edit_post_title, post.typeTitle, edcal.getDayFromDayId(post.date).toString(edcal.previewDateFormat)));
 
@@ -975,27 +1362,13 @@ var edcal = {
 
         jQuery('#edcal-title-new-field').focus();
         jQuery('#edcal-title-new-field').select();
-
-        /*
-        tb_init('a.thickbox, area.thickbox, input.thickbox');
-
-        edCanvas = document.getElementById('content');
-        edInsertContent = null;
-
-        jQuery('a.thickbox').click(function(){
-            if ( typeof tinyMCE != 'undefined' && tinyMCE.activeEditor ) {
-                tinyMCE.get('content').focus();
-                tinyMCE.activeEditor.windowManager.bookmark = tinyMCE.activeEditor.selection.getBookmark('simple');
-            }
-        });
-        */
     },
 
     /*
      * Hides the add/edit form
      */
     hideForm: function() {
-        jQuery('#tooltip').hide();
+        jQuery('#edcal_quickedit').hide();
         jQuery('#edcal_scrollable').data('scrollable').getConf().keyboard = true;
         edcal.resetForm();
     },
@@ -1004,7 +1377,7 @@ var edcal = {
      * Clears all the input values in the add/edit form
      */
     resetForm: function() {
-        jQuery('#tooltip').find('input, textarea, select').each(function() {
+        jQuery('#edcal_quickedit').find('input, textarea, select').each(function() {
             this.value = '';
         });
 
@@ -1039,7 +1412,7 @@ var edcal = {
        specified day.
      */
     findPostForId: function(/*string*/ dayobjId, /*string*/ postId) {
-        if (edcal.posts[dayobjId]) {
+         if (edcal.posts[dayobjId]) {
             for (var i = 0; i < edcal.posts[dayobjId].length; i++) {
                 if (edcal.posts[dayobjId][i] &&
                     'post-' + edcal.posts[dayobjId][i].id === postId) {
@@ -1055,10 +1428,11 @@ var edcal = {
      * Removes a post from the HTML and the posts cache.
      */
     removePostItem: function(/*string*/ dayobjId, /*string*/ postId) {
+         //edcal.output('removePostItem(' + dayobjId + ', ' + postId + ')');
          if (edcal.findPostForId(dayobjId, postId)) {
              for (var i = 0; i < edcal.posts[dayobjId].length; i++) {
-                 if (edcal.posts[dayobjId][i] &&
-                     'post-' + edcal.posts[dayobjId][i].id === postId) {
+                 if (edcal.posts[dayobjId][i] && 'post-' + edcal.posts[dayobjId][i].id === postId) {
+	                 //edcal.output('(#' + postId+').remove()  -  post-'+edcal.posts[dayobjId][i].id);
                      edcal.posts[dayobjId][i] = null;
                      jQuery('#' + postId).remove();
                  }
@@ -1089,25 +1463,39 @@ var edcal = {
        specified ID.
      */
     showActionLinks: function(/*string*/ postid) {
+         if (edcal.actionTimer) {
+             clearTimeout(edcal.actionTimer);
+         }
+         
+         var timeout = 250;
+         
          var post = edcal.findPostForId(jQuery('#' + postid).parent().parent().parent().attr('id'), postid);
-
+    
          if (edcal.inDrag || !edcal.isPostEditable(post)) {
              return;
          }
-
+         
          var elem = jQuery('#' + postid + ' > div.postactions');
-
-         elem.show();
-
-
-         if (elem.parent().position().top + elem.parent().height() > elem.parent().parent().height()) {
-             /*
-                This means the action links probably won't be visible and we need to
-                scroll to make sure the users can see it.
-              */
-             var p = jQuery('#' + postid + ' > div.postactions').parent().parent();
-             p.scrollTop(p.scrollTop() + 45);
-         }
+         
+         if (edcal.actionLinksElem && edcal.actionLinksElem.get(0) !== elem.get(0)) {
+             edcal.actionLinksElem.slideUp();
+         } 
+         
+         edcal.actionLinksElem = elem;
+         
+         edcal.actionTimer = setTimeout(function() {
+             elem.slideDown();
+    
+    
+             if (elem.parent().position().top + elem.parent().height() > elem.parent().parent().height()) {
+                 /*
+                    This means the action links probably won't be visible and we need to
+                    scroll to make sure the users can see it.
+                  */
+                 var p = jQuery('#' + postid + ' > div.postactions').parent().parent();
+                 p.scrollTop(p.scrollTop() + 45);
+             }
+         }, timeout);
     },
 
     /*
@@ -1115,8 +1503,15 @@ var edcal = {
        post ID.
      */
     hideActionLinks: function(/*string*/ postid) {
-         var elem = jQuery('#' + postid + ' > div.postactions');
-         elem.hide();
+         if (edcal.actionTimer) {
+             clearTimeout(edcal.actionTimer);
+         }
+         
+         edcal.actionTimer = setTimeout(function() {
+             var elem = jQuery('#' + postid + ' > div.postactions');
+             elem.slideUp();
+             edcal.actionLinksElem = null;
+         }, 125);
     },
 
     /*
@@ -1190,27 +1585,34 @@ var edcal = {
          if (edcal.timePref) {
              posttitle = '<span class="posttime">' + post.formattedtime + '</span> ' + posttitle;
          }
-
+         
          if (edcal.authorPref) {
              posttitle = sprintf(edcal.str_by, posttitle, '<span class="postauthor">' + post.author + '</span>');
          }
+         
 
          var classString = '';
 
          if (edcal.isPostMovable(post)) {
              return '<li onmouseover="edcal.showActionLinks(\'post-' + post.id + '\');" ' +
                  'onmouseout="edcal.hideActionLinks(\'post-' + post.id + '\');" ' +
-                 'id="post-' + post.id + '" class="post ' + post.status + ' ' + edcal.getPostEditableClass(post) + '"><div class="postlink ' + classString + '">' + posttitle + '</div>' +
+                 'id="post-' + post.id + '" class="post ' + post.status + ' ' + edcal.getPostEditableClass(post) + '"><div class="postlink ' + classString + '">' + 
+                     '<span>' + posttitle + '</span>' +
+                   '</div>' +
                  '<div class="postactions">' +
                  '<a href="' + post.editlink + '">' + edcal.str_edit + '</a> | ' +
                  '<a href="#" onclick="edcal.editPost(' + post.id + '); return false;">' + edcal.str_quick_edit + '</a> | ' +
                  '<a href="' + post.dellink + '" onclick="return edcal.confirmDelete(\'' + post.title + '\');">' + edcal.str_del + '</a> | ' +
-                 '<a href="' + post.permalink + '">' + edcal.str_view + '</a>' +
+                 '<a href="' + post.permalink + '"' +
+                   // ' onclick="edcal.getPost('+post.id+',function(r){ edcal.output(r) }); return false;"' + // for debugging
+                 '>' + edcal.str_view + '</a>' +
                  '</div></li>';
          } else {
              return '<li onmouseover="edcal.showActionLinks(\'post-' + post.id + '\');" ' +
                  'onmouseout="edcal.hideActionLinks(\'post-' + post.id + '\');" ' +
-                 'id="post-' + post.id + '" class="post ' + post.status + ' ' + edcal.getPostEditableClass(post) + '"><div class="postlink ' + classString + '">' + posttitle + '</div>' +
+                 'id="post-' + post.id + '" class="post ' + post.status + ' ' + edcal.getPostEditableClass(post) + '"><div class="postlink ' + classString + '">' + 
+                     '<span>' + posttitle + '</span>' +
+                   '</div>' +
                  '<div class="postactions">' +
                  '<a href="' + post.editlink + '">' + edcal.str_republish + '</a> | ' +
                  '<a href="' + post.permalink + '">' + edcal.str_view + '</a>' +
@@ -1254,7 +1656,7 @@ var edcal = {
          /*
           * If the add/edit post form is visible, don't go anywhere.
           */
-        if (jQuery('#tooltip').is(':visible')) {
+        if (jQuery('#edcal_quickedit').is(':visible')) {
             return;
         }
 
@@ -1542,6 +1944,7 @@ var edcal = {
      */
     savePosition: function() {
          var cal = jQuery('#edcal_scrollable');
+         var cal_cont = jQuery('#cal_cont');
          edcal.position = {
              top: cal.offset().top,
              bottom: cal.offset().top + cal.height()
@@ -1580,6 +1983,10 @@ var edcal = {
                                     'height: ' + dayHeight + 'px;' +
                                '}' +
                                '</style>');
+
+
+         jQuery('#draftsdrawer').css('height', cal_cont.height());
+         jQuery('#draftsdrawer .day').css('min-height', (cal_cont.height() - 10) - jQuery('#draftsdrawer .draftsdrawerheadcont').height());
     },
 
     /*
@@ -1638,218 +2045,6 @@ var edcal = {
     },
 
     /*
-     * Initializes the calendar
-     */
-    init: function() {
-         if (jQuery('#edcal_scrollable').length === 0) {
-             /*
-              * This means we are on a page without the editorial
-              * calendar
-              */
-             return;
-         }
-
-        edcal.addFeedbackSection();
-
-        jQuery('#loading').hide();
-
-        jQuery('#edcal_scrollable').css('height', edcal.getCalHeight() + 'px');
-        edcal.windowHeight = jQuery(window).height();
-
-        /*
-         *  Add the days of the week
-         */
-        edcal.createDaysHeader();
-
-        /*
-         * We start by initializting the scrollable.  We use this to manage the
-         * scrolling of the calendar, but don't actually call it to animate the
-         * scrolling.  We specify an easing here because the default is "swing"
-         * and that has a conflict with JavaScript used in the BuddyPress plugin/
-         *
-         * This doesn't really change anything since the animation happens offscreen.
-         */
-        jQuery('#edcal_scrollable').scrollable({
-                                    vertical: true,
-                                    size: edcal.weeksPref,
-                                    keyboard: false,
-                                    keyboardSteps: 1,
-                                    speed: 100,
-                                    easing: 'linear'
-                                    });
-
-        var api = jQuery('#edcal_scrollable').scrollable();
-        
-        api.getConf().keyboard = false;
-
-        /*
-           When the user moves the calendar around we remember their
-           date and save it in a cookie.  Then we read the cookie back
-           when we reload so the calendar stays where the user left
-           it last.
-         */
-        var curDate = jQuery.cookie('edcal_date');
-
-        if (curDate) {
-            curDate = Date.parseExact(curDate, 'yyyy-dd-MM');
-            edcal.output('Resetting to date from the edcal_Date cookie: ' + curDate);
-        } else {
-            curDate = Date.today();
-        }
-
-        edcal.moveTo(curDate.clone());
-        
-        jQuery('#edcal_scrollable').bind('mousewheel', function(event, delta) {
-            var dir = delta > 0 ? false : true, vel = Math.abs(delta);
-            edcal.output(dir + ' at a velocity of ' + vel);
-
-            if (!edcal.isMoving && vel > 0.2) {
-                edcal.move(1, dir);
-            }
-            
-            return false;
-        });
-        
-        /*
-           We are handling all of our own events so we just cancel all events from
-           the scrollable.
-         */
-        api.onBeforeSeek(function(evt, direction) {
-            return false;
-        });
-
-        /*
-         * We also want to listen for a few other key events
-         */
-        jQuery(document).bind('keydown', function(evt) {
-            //if (evt.altKey || evt.ctrlKey) { return; }
-            //output("evt.altKey: " + evt.altKey);
-            //output("evt.keyCode: " + evt.keyCode);
-            //output("evt.ctrlKey: " + evt.ctrlKey);
-            
-            if (evt.keyCode === 27) { //escape key
-                edcal.hideForm();
-                return false;
-            }
-            
-            if (jQuery('#tooltip').is(':visible')) {
-                return;
-            }
-
-            if ((evt.keyCode === 40 && !(evt.altKey || evt.ctrlKey))) {        // down arrow key
-                edcal.move(1, true);
-                return false;
-            } else if ((evt.keyCode === 38 && !(evt.altKey || evt.ctrlKey))) { // up arrow key
-                edcal.move(1, false);
-                return false;
-            } else if ((evt.keyCode === 34 && !(evt.altKey || evt.ctrlKey)) || //page down
-                evt.keyCode === 40 && evt.ctrlKey) {                           // Ctrl+down down arrow
-                edcal.move(edcal.weeksPref, true);
-                return false;
-            } else if ((evt.keyCode === 33 && !(evt.altKey || evt.ctrlKey)) || //page up
-                evt.keyCode === 38 && evt.ctrlKey) {                           // Ctrl+up up arrow
-                edcal.move(edcal.weeksPref, false);
-                return false;
-            }
-            
-            return true;
-        });
-        
-        edcal.getPosts(edcal.nextStartOfWeek(curDate).add(-3).weeks(),
-                       edcal.nextStartOfWeek(curDate).add(edcal.weeksPref + 3).weeks());
-        
-        /*
-           Now we bind the listeners for all of our links and the window
-           resize.
-         */
-        jQuery('#moveToToday').click(function() {
-            edcal.moveTo(Date.today());
-            edcal.getPosts(edcal.nextStartOfWeek(Date.today()).add(-3).weeks(),
-                           edcal.nextStartOfWeek(Date.today()).add(edcal.weeksPref + 3).weeks());
-            return false;
-        });
-        
-        jQuery('#prevmonth').click(function() {
-            edcal.move(edcal.weeksPref, false);
-            return false;
-        });
-
-        jQuery('#nextmonth').click(function() {
-            edcal.move(edcal.weeksPref, true);
-            return false;
-        });
-        
-        /*
-           We used to listen to resize events so we could make the calendar the right size
-           for the current window when it changed size, but this was causing a problem with
-           WordPress 3.3 and it never worked properly because the scroll position was a little
-           off so we are just skipping it.
-         */
-        /*function resizeWindow(e) {
-            if (edcal.windowHeight != jQuery(window).height()) {
-                jQuery('#edcal_scrollable').css('height', edcal.getCalHeight() + 'px');
-                edcal.windowHeight = jQuery(window).height();
-                edcal.savePosition();
-            }
-        }
-        jQuery(window).bind('resize', resizeWindow);*/
-
-        jQuery('#newPostScheduleButton').live('click', function(evt) {
-            // if the button is disabled, don't do anything
-            if (jQuery(this).hasClass('disabled')) {
-                return false;
-            }
-            // Otherwise,
-            // make sure we can't make duplicate posts by clicking twice quickly
-            jQuery(this).addClass('disabled');
-            // and save the post
-            return edcal.savePost(null, false, true);
-        });
-
-        jQuery('#edcal-title-new-field').bind('keyup', function(evt) {
-            if (jQuery('#edcal-title-new-field').val().length > 0 && jQuery('#edcal-time').val().length > 0) {
-                jQuery('#newPostScheduleButton').removeClass('disabled');
-            } else {
-                jQuery('#newPostScheduleButton').addClass('disabled');
-            }
-
-            if (evt.keyCode == 13) {    // enter key
-                /*
-                 * If the user presses enter we want to save the draft.
-                 */
-                return edcal.savePost(null, true);
-            }
-        });
-
-        jQuery('#edcal-status').bind('change', function(evt) {
-            edcal.updatePublishButton();
-        });
-
-        jQuery('#edcal_weeks_pref').live('keyup', function(evt) {
-            if (jQuery('#edcal_weeks_pref').val().length > 0) {
-                jQuery('#edcal_applyoptions').removeClass('disabled');
-            } else {
-                jQuery('#edcal_applyoptions').addClass('disabled');
-            }
-
-            if (evt.keyCode == 13) {    // enter key
-                edcal.saveOptions();
-            }
-
-        });
-
-        edcal.savePosition();
-
-        edcal.addOptionsSection();
-
-        jQuery('#edcal-time').timePicker({
-            show24Hours: edcal.timeFormat === 'H:i' || edcal.timeFormat === 'G:i',
-            separator: ':',
-            step: 30
-        });
-    },
-
-    /*
        This function updates the text of te publish button in the quick
        edit dialog to match the current operation.
      */
@@ -1868,12 +2063,25 @@ var edcal = {
        the specified post on the server.
      */
     changeDate: function(/*string*/ newdate, /*Post*/ post, /*function*/ callback) {
-         edcal.output('Changing the date of "' + post.title + '" to ' + newdate);
-         var newdateFormatted = edcal.getDayFromDayId(newdate).toString(edcal.wp_dateFormat);
+         edcal.output('changeDate(' + newdate + ', ' + post + ')');
+	     var move_to_drawer = newdate === edcal.NO_DATE;
+	     var move_from_drawer = post.date_gmt === edcal.NO_DATE;
+	     var newdateFormatted = move_to_drawer ? '0000-00-00' : edcal.getDayFromDayId(newdate).toString(edcal.wp_dateFormat);
+	     // edcal.output('newdate='+newdate+'\nnewdateFormatted='+newdateFormatted);
 
+         var olddate = move_from_drawer ? post.date_gmt : edcal.getDayFromDayId(post.date).toString(edcal.wp_dateFormat);
+
+         
+         if (move_to_drawer) {
+             /*
+              * If the post is going into the drafts drawer then it must be a draft
+              */
+             post.status = 'draft';
+         }
+         
          var url = edcal.ajax_url() + '&action=edcal_changedate&postid=' + post.id +
              '&postStatus=' + post.status +
-             '&newdate=' + newdateFormatted + '&olddate=' + edcal.getDayFromDayId(post.date).toString(edcal.wp_dateFormat);
+             '&newdate=' + newdateFormatted + '&olddate=' + olddate;
 
          jQuery('#post-' + post.id).addClass('loadingclass');
 
@@ -1882,8 +2090,12 @@ var edcal = {
             type: 'POST',
             processData: false,
             timeout: 100000,
+            // dataType: 'text',
             dataType: 'json',
             success: function(res) {
+                edcal.output('res.post.date='+res.post.date);
+                edcal.output(res.post);
+                // console.log(res.post);
                 if (res.error) {
                     /*
                      * If there was an error we need to remove the dropped
@@ -1899,9 +2111,19 @@ var edcal = {
                     }
                 }
 
-                edcal.removePostItem(res.post.date, 'post-' + res.post.id);
-                edcal.addPostItem(res.post, res.post.date);
-                edcal.addPostItemDragAndToolltip(res.post.date);
+				// edcal.output(res.post.date);
+                // var container = newdateFormatted == '0000-00-00' ? 
+
+                var removecont = move_to_drawer ? '00000000' : res.post.date;
+                var addcont = move_from_drawer ? newdate : removecont;
+                if ( res.post.date_gmt=='01011970' ) {
+                    // do somthing else
+                }
+
+                edcal.removePostItem(removecont, 'post-' + res.post.id);
+                // edcal.output('remove post from: '+removecont+', add post to: '+addcont);
+                edcal.addPostItem(res.post, addcont);
+                edcal.addPostItemDragAndToolltip(addcont);
 
                 if (callback) {
                     callback(res);
@@ -1925,7 +2147,9 @@ var edcal = {
        specified dates.
      */
     getPosts: function(/*Date*/ from, /*Date*/ to, /*function*/ callback) {
-         edcal.output('Getting posts from ' + from + ' to ' + to);
+         if ( !to )
+             to = '';
+         // edcal.output('Getting posts from ' + from + ' to ' + to);
 
          var shouldGet = edcal.cacheDates[from];
 
@@ -1935,7 +2159,7 @@ var edcal = {
               * that we have already covered.  This is cutting down on
               * it somewhat, but we could get much better about this.
               */
-             edcal.output('Using cached results for posts from ' + from.toString('dd-MMM-yyyy') + ' to ' + to.toString('dd-MMM-yyyy'));
+             // edcal.output('Using cached results for posts from ' + from.toString('dd-MMM-yyyy') + ' to ' + to.toString('dd-MMM-yyyy'));
 
              if (callback) {
                  callback();
@@ -1960,6 +2184,7 @@ var edcal = {
              timeout: 100000,
              dataType: 'text',
              success: function(res) {
+				// edcal.output(res);
                 jQuery('#loading').hide();
                 /*
                  * These result here can get pretty large on a busy blog and
@@ -1999,9 +2224,13 @@ var edcal = {
                          * case to make sure we don't get into trouble.
                          */
                         post.date = post.date.replace(post.date.substring(2, 3), post.date.substring(2, 3).toUpperCase());
+                        if ( from=='00000000' )
+                            post.date = from;
 
+		                // edcal.output(post.date + ', post-' + post.id);
                         edcal.removePostItem(post.date, 'post-' + post.id);
                         edcal.addPostItem(post, post.date);
+                        // edcal.output(post.id + ', ' + post.date);
                         postDates[postDates.length] = post.date;
                     }
                 }
@@ -2017,7 +2246,7 @@ var edcal = {
                  * stop complaining.
                  */
                 setTimeout(function() {
-                    edcal.output('Finished adding draggable support to ' + postDates.length + ' posts.');
+                    // edcal.output('Finished adding draggable support to ' + postDates.length + ' posts.');
                     jQuery.each(postDates, function(i, postDate) {
                         edcal.addPostItemDragAndToolltip(postDate);
                     });
@@ -2096,7 +2325,7 @@ var edcal = {
     },
 
     /*
-       This function adds the scren options tab to the top of the screen.  I wish
+       This function adds the screen options tab to the top of the screen.  I wish
        WordPress had a hook so I could provide this in PHP, but as of version 2.9.1
        they just have an internal loop for their own screen options tabs so we're
        doing this in JavaScript.
@@ -2108,7 +2337,9 @@ var edcal = {
                    'id="show-edcal-settings-link" ' +
                    'onclick="edcal.toggleOptions(); return false;" ' +
                    'href="#" ' +
-                   'style="background-image: url(images/screen-options-right.gif); background-position: right 0px;">' + edcal.str_screenoptions + '</a>' +
+                   '>' + 
+                   edcal.str_screenoptions + 
+                   '</a>' +
              '</div>';
          
          if (jQuery('#screen-meta-links').length === 0) {
@@ -2190,7 +2421,7 @@ var edcal = {
              
              jQuery('#screen-meta').show();
 
-             jQuery('#show-edcal-settings-link').css('background-image', 'url(images/screen-options-right-up.gif)');
+             jQuery('#show-edcal-settings-link').addClass('screen-meta-active');
          } else {
              jQuery('#contextual-help-wrap').slideUp('fast');
 
@@ -2201,7 +2432,7 @@ var edcal = {
 
              edcal.helpMeta = null;
 
-             jQuery('#show-edcal-settings-link').css('background-image', 'url(images/screen-options-right.gif)');
+             jQuery('#show-edcal-settings-link').removeClass('screen-meta-active');
              jQuery('#contextual-help-link-wrap').css('visibility', '');
          }
     },
@@ -2387,9 +2618,10 @@ jQuery(document).ready(function() {
          * conflict with a JavaScript library imported by
          * another plugin.
          */
+        edcal.output('Error loading calendar: ' + e);
         edcal.showFatalError(e.description);
     }
-
+    
     /*
      * The calendar supports unit tests through the QUnit framework,
      * but we don't want to load the extra files when we aren't running

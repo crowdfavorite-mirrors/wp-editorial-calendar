@@ -40,7 +40,7 @@ var edcal_test = {
         css.attr({
             rel: 'stylesheet',
             type: 'text/css',
-            href: '../wp-content/plugins/edcal/lib/qunit.css'
+            href: edcal.plugin_url + '/lib/qunit.css'
         });
 
         jQuery('#wpbody-content .wrap').append('<div id="edcal-qunit"></div>');

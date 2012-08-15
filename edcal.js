@@ -1102,7 +1102,7 @@ var edcal = {
 
         var date = jQuery(this).parent().parent().attr('id');
 
-        var formattedtime = '10:00';
+        var formattedtime = edcal.defaultTime;
         if (edcal.timeFormat !== 'H:i' && edcal.timeFormat !== 'G:i') {
             formattedtime += ' AM';
         }
@@ -1191,7 +1191,7 @@ var edcal = {
          if (post.time !== '') {
             time = Date.parse(post.time);
          } else {
-            time = Date.parse('10:00:00'); // If we don't have a time set, default it to 10am
+            time = Date.parse(edcal.defaultTime); // If we don't have a time set, default it to 10am
          }
          
          var formattedDate;
@@ -1208,7 +1208,8 @@ var edcal = {
                        '&title=' + encodeURIComponent(post.title) +
                        '&content=' + encodeURIComponent(post.content) +
                        '&id=' + encodeURIComponent(post.id) +
-                       '&status=' + encodeURIComponent(post.status);
+                       '&status=' + encodeURIComponent(post.status) + 
+                       '&orig_status=' + encodeURIComponent(post.orig_status);
          
          if (time === null || time === edcal.NO_DATE) {
              postData += '&date_gmt=' + encodeURIComponent('0000-00-00 00:00:00');

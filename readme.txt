@@ -13,7 +13,7 @@ Did you remember to write a post for next Tuesday?  What about the Tuesday after
 
 <h4>Watch the video</h4>
 
-[vimeo http://vimeo.com/13196017]
+[vimeo http://vimeo.com/47251750]
 
 <h4>Try it out</h4>
 Try the calendar before you install it.  Check out the demo installation at <a href="http://www.zackgrossbart.com/extras/sandbox/wp-admin/edit.php?page=cal">Zack's WordPress Sandbox</a>.
@@ -172,6 +172,16 @@ Moving published posts can cause problems with some RSS feeds and is generally n
 7. Use the new unscheduled drafts section to manage drafts before you schedule them.
 
 == Changelog ==
+
+= 2.5 =
+
+The calendar is now handling the post ID in the same way for each call it uses to get data about each post when returning post data to the calendar to avoid some PHP warnings.
+
+The calendar is now more careful about PHP warnings so it still works if the blog is set to show PHP warnings.
+
+The unit tests are now using the correct CSS reference so they show up properly.
+
+Moved the setting for the default post time to the edcal.php so it's easier to change without recompiling the JavaScript.
 
 = 2.4 =
 

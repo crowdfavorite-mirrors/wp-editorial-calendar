@@ -597,3 +597,7 @@ TinyMCE Rich Editor and Media buttons are not currently used
 #moveToToday {
     margin-left: 1.5em;
 }
+
+.tablenav .tablenav-pages a {
+    background-position-y: -380px;
+}

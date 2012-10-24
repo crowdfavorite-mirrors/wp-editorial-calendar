@@ -754,7 +754,7 @@ var edcal = {
         var _date = edcal._wDate.clone();
 
         var newrow = '<div class="rowcont" id="' + 'row' + edcal._wDate.toString(edcal.internalDateFormat) + '">' +
-                     '<div id="' + 'row' + edcal._wDate.toString(edcal.internalDateFormat) + 'row" class="row">';
+                     '<div id="' + 'row' + edcal._wDate.toString(edcal.internalDateFormat) + 'row" class="edcal_row">';
         for (var i = 0; i < 7; i++) {
             /*
              * Adding all of these calls in the string is kind of messy.  We
@@ -1822,8 +1822,8 @@ var edcal = {
            last day in the last week.  We call children twice to
            work around a small JQuery issue.
          */
-        var firstDate = edcal.getDayFromDayId(items.eq(0).children('.row').children('.day:first').attr('id'));
-        var lastDate = edcal.getDayFromDayId(items.eq(edcal.weeksPref - 1).children('.row').children('.day:last').attr('id'));
+        var firstDate = edcal.getDayFromDayId(items.eq(0).children('.edcal_row').children('.day:first').attr('id'));
+        var lastDate = edcal.getDayFromDayId(items.eq(edcal.weeksPref - 1).children('.edcal_row').children('.day:last').attr('id'));
 
         jQuery('#currentRange').text(edcal.chineseAposWorkaround(firstDate.toString(Date.CultureInfo.formatPatterns.yearMonth)) + ' - ' + 
                                      edcal.chineseAposWorkaround(lastDate.toString(Date.CultureInfo.formatPatterns.yearMonth)));

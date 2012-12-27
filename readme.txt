@@ -2,8 +2,8 @@
 Contributors: cvernon, justinstresslimit, jkudish, MaryVogt, zgrossbart
 Tags: posts, post, calendar, AJAX, admin, administration
 Requires at least: 2.8.5
-Tested up to: 3.4.1
-Stable tag: 2.5
+Tested up to: 3.5
+Stable tag: 2.6
 
 The Editorial Calendar makes it possible to see all your posts and drag and drop them to manage your blog.
 
@@ -60,8 +60,8 @@ From time to time people write articles about the editorial calendar.  We apprec
 
 <a href="http://www.smashingmagazine.com/2010/08/30/the-importance-of-consistency-using-editorial-calendars-and-style-guides/">Blogging For Web Designers: Editorial Calendars and Style Guides</a> by <a href="http://jessica.smashingmagazine.com/">Jessica Bordeau</a> at <a href="http://www.smashingmagazine.com/">Smashing Magazine</a>
 
-<a href="http://thebloggingacademy.com/editorial-calendar-wordpress-plugin-review/">
-Editorial Calendar WordPress plugin review</a> by <a href="http://thebloggingacademy.com/">The Blogging Academy</a>
+<a href="http://mydigitalinternet.com/2010/editorial-calendar-wordpress-plugin-review">
+Editorial Calendar WordPress plugin review</a> by Stephen Duckworth at <a href="http://mydigitalinternet.com/">My Digital Internet</a>
 
 <a href="http://www.disruptiveconversations.com/2010/09/brogan-is-right-the-editorial-calendar-wordpress-plugin-truly-rocks.html">Brogan is right - the "Editorial Calendar" WordPress plugin truly rocks!</a> by <a href="http://www.danyork.com/">Dan York</a>
 
@@ -172,6 +172,16 @@ Moving published posts can cause problems with some RSS feeds and is generally n
 7. Use the new unscheduled drafts section to manage drafts before you schedule them.
 
 == Changelog ==
+
+= 2.6 = 
+
+Fixed some layout issues with the previous and next calendar buttons in WordPress 3.5.
+
+We are now properly saving new posts in the drafts drawer in WordPress 3.5.
+
+Added unit tests to cover creating a new post in the drafts drawer.
+
+Added a few performance improvements to the calendar like making sure we only load our code in the admin console.
 
 = 2.5 =
 

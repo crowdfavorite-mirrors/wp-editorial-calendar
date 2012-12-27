@@ -505,6 +505,68 @@ var edcal_test = {
                     equals(jQuery('#post-' + res.post.id).length, 0, 'The post should now be deleted from the calendar.');
                     start();
                     
+                    edcal_test.testCreateDraftDrawerPost();
+
+                });
+         });
+    },
+
+    testCreateDraftDrawerPost: function() {
+         /*
+          * Now we'll create a new post in the drafts drawer
+          */
+
+         asyncTest('Create a new drafts drawer post', function() {
+             expect(2);
+
+             edcal_test.post.title = 'Unit Test Drafts Drawer Post';
+             edcal_test.post.content = edcal_test.testContent;
+             edcal_test.post.status = 'draft';
+             edcal_test.post.time = edcal.NO_DATE;
+             edcal_test.post.date = edcal.NO_DATE;
+             edcal_test.post.id = '0';
+
+             edcal.savePost(edcal_test.post, false, false, function(res) {
+                 if (!res.post) {
+                     ok(false, 'There was an error creating the new post.');
+                     start();
+                     return;
+                 }
+
+                 equals(res.post.title, edcal_test.post.title, 'The resulting post should have the same title as the request');
+
+                 equals(jQuery('#post-' + res.post.id).length, 1, 'The post should be added in only one place in the calendar.');
+
+                 edcal_test.post = res.post;
+                 
+                 start();
+
+                 edcal_test.testDeleteDraftDrawerPost();
+             });
+         });
+
+    },
+
+    testDeleteDraftDrawerPost: function() {
+
+         /*
+          * The last step is to delete the post we made so
+          * the test cleans up after itself.
+          */
+         asyncTest('Delete the post created for drafts drawer testing', function() {
+             expect(1);
+
+             edcal.deletePost(edcal_test.post.id, function(res)
+                {
+                    if (!res.post) {
+                        ok(false, 'There was an error creating the new post.');
+                        start();
+                        return;
+                    }
+
+                    equals(jQuery('#post-' + res.post.id).length, 0, 'The post should now be deleted from the calendar.');
+                    start();
+                    
                     edcal_test.finishTests();
 
                 });

@@ -18,18 +18,18 @@
 /*
 Plugin Name: WordPress Editorial Calendar
 Description: The Editorial Calendar makes it possible to see all your posts and drag and drop them to manage your blog.
-Version: 2.5
+Version: 2.6
 Author: Colin Vernon, Justin Evans, Joachim Kudish, Mary Vogt, and Zack Grossbart
 Author URI: http://www.zackgrossbart.com
 Plugin URI: http://stresslimitdesign.com/editorial-calendar-plugin
 */
 
 
-
-global $edcal;
-if( empty($edcal) )
-    $edcal = new EdCal();
-
+if ( is_admin() ) {
+    global $edcal;
+    if ( empty($edcal) )
+        $edcal = new EdCal();
+}
 
 
 /*
@@ -142,7 +142,6 @@ class EdCal {
      * generates the divs that we need for the JavaScript to work.
      */
     function edcal_list_admin() {
-        include_once('edcal.php');
         
         /*
          * We want to count the number of times they load the calendar
@@ -388,16 +387,16 @@ class EdCal {
                         <a href="#" title="<?php echo(__('Jump back', 'editorial-calendar')) ?>" class="prev page-numbers" id="prevmonth">&lsaquo;</a>
                         <span id="currentRange"></span>
                         <a href="#" title="<?php echo(__('Skip ahead', 'editorial-calendar')) ?>" class="next page-numbers" id="nextmonth">&rsaquo;</a>
-                        <a class="save button" title="<?php echo(__('Scroll the calendar and make the last post visible', 'editorial-calendar')) ?>" id="moveToLast">&raquo;</a>
+                        <a class="next page-numbers" title="<?php echo(__('Scroll the calendar and make the last post visible', 'editorial-calendar')) ?>" id="moveToLast">&raquo;</a>
 
-                        <a class="save button" title="<?php echo(__('Scroll the calendar and make the today visible', 'editorial-calendar')) ?>" id="moveToToday"><?php echo(__('Show Today', 'editorial-calendar')) ?></a>
+                        <a class="next page-numbers" title="<?php echo(__('Scroll the calendar and make the today visible', 'editorial-calendar')) ?>" id="moveToToday"><?php echo(__('Show Today', 'editorial-calendar')) ?></a>
                         
                         
                     </h3>
                 </div>
 
                 <div id="topright" class="tablenav-pages alignright">
-                    <a class="save button" title="<?php echo(__('Show unscheduled posts', 'editorial-calendar')) ?>" id="showdraftsdrawer"><?php echo(__('Show Unscheduled Drafts', 'editorial-calendar')) ?></a>
+                    <a class="next page-numbers" title="<?php echo(__('Show unscheduled posts', 'editorial-calendar')) ?>" id="showdraftsdrawer"><?php echo(__('Show Unscheduled Drafts', 'editorial-calendar')) ?></a>
                 </div>
             </div>
             
@@ -1006,11 +1005,11 @@ class EdCal {
         $my_post = array();
         
         // If the post id is not specified, we're creating a new post
-        if($_POST['id']) {
+        if($_POST['id'] && intval($_POST['id']) > 0) {
             $my_post['ID'] = intval($_POST['id']);
         } else {
             // We have a new post
-            $my_post['ID'] = 0; // and the post ID to 0
+            //$my_post['ID'] = 0; // and the post ID to 0
             
             // Set the status to draft unless the user otherwise specifies
             if ($_POST['status']) {
@@ -1023,10 +1022,18 @@ class EdCal {
         $my_post['post_title'] = isset($_POST["title"])?$_POST["title"]:null;
         $my_post['post_content'] = isset($_POST["content"])?$_POST["content"]:null;
         
-        $my_post['post_date'] = $edcal_date;
-        $my_post['post_date_gmt'] = $edcal_date_gmt;
-        $my_post['post_modified'] = $edcal_date;
-        $my_post['post_modified_gmt'] = $edcal_date_gmt;
+        if ($edcal_date_gmt != '0000-00-00 00:00:00' || $my_post['ID'] > 0) {
+            /*
+             * We don't want to set a date if this a new post in the drafts
+             * drawer since WordPress 3.5 will reject new posts with a 0000 
+             * GMT date.
+             */
+            $my_post['post_date'] = $edcal_date;
+            $my_post['post_date_gmt'] = $edcal_date_gmt;
+            $my_post['post_modified'] = $edcal_date;
+            $my_post['post_modified_gmt'] = $edcal_date_gmt;
+        }
+        
         $my_post['post_status'] = $_POST['status'];
         
         /* 
@@ -1047,9 +1054,9 @@ class EdCal {
             $my_post_id = wp_update_post($my_post);
         } else {
             // We have a new post, insert the post into the database
-            $my_post_id = wp_insert_post($my_post);
+            $my_post_id = wp_insert_post($my_post, true);
         }
-
+        
         // TODO: throw error if update/insert or getsinglepost fails
         /*
          * We finish by returning the latest data for the post in the JSON
@@ -1364,4 +1371,4 @@ class EdCal {
 
 }
 
-
+?>

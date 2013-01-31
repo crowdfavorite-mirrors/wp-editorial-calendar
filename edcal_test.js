@@ -40,7 +40,7 @@ var edcal_test = {
         css.attr({
             rel: 'stylesheet',
             type: 'text/css',
-            href: '../wp-content/plugins/edcal/lib/qunit.css'
+            href: edcal.plugin_url + '/lib/qunit.css'
         });
 
         jQuery('#wpbody-content .wrap').append('<div id="edcal-qunit"></div>');
@@ -60,14 +60,14 @@ var edcal_test = {
          var api = jQuery('#edcal_scrollable').scrollable();
          var items = api.getVisibleItems();
 
-         return edcal.getDayFromDayId(items.eq(0).children('.row').children('.day:first').attr('id'));
+         return edcal.getDayFromDayId(items.eq(0).children('.edcal_row').children('.day:first').attr('id'));
     },
 
     getLastDate: function() {
          var api = jQuery('#edcal_scrollable').scrollable();
          var items = api.getVisibleItems();
 
-         return edcal.getDayFromDayId(items.eq(edcal.weeksPref - 1).children('.row').children('.day:last').attr('id'));
+         return edcal.getDayFromDayId(items.eq(edcal.weeksPref - 1).children('.edcal_row').children('.day:last').attr('id'));
     },
 
     moveTests: function() {
@@ -111,7 +111,7 @@ var edcal_test = {
          /*
           * Now we'll move 4 weeks into the future
           */
-         asyncTest('Move 4 week in the future and check visible dates', function() {
+         asyncTest('Move 4 weeks in the future and check visible dates', function() {
              expect(2);
 
              edcal.move(4, true, function() {
@@ -136,7 +136,7 @@ var edcal_test = {
          /*
           * Now 8 weeks into the past
           */
-         asyncTest('Move 8 week in the past and check visible dates', function() {
+         asyncTest('Move 8 weeks in the past and check visible dates', function() {
              expect(2);
 
              edcal.move(8, false, function() {
@@ -147,8 +147,44 @@ var edcal_test = {
 
                  edcal.move(8, true, function() {
                      start();
-                     edcal_test.testCreatePost();
+                     edcal_test.testMoveToLast();
                  });
+             });
+
+
+         });
+    },
+    
+    testMoveToLast: function() {
+         if (edcal.lastPostDate === '-1') {
+             /*
+              * Then there aren't any posts and we can't go
+              * to the last one so we just skip this test.
+              */
+             edcal_test.testCreatePost();
+             return;
+         }
+         
+         var d = Date.parseExact(edcal.lastPostDate, 'ddMMyyyy');
+         var curSunday = edcal.nextStartOfWeek(d).add(-1).weeks();
+
+         /*
+          * Now move to the last post, get the post date, and make sure the post
+          * is there with the correct ID.
+          */
+         asyncTest('Move to the last post', function() {
+             expect(1);
+
+             edcal.moveTo(d);
+             edcal.getPosts(edcal.nextStartOfWeek(d).add(-3).weeks(),
+                            edcal.nextStartOfWeek(d).add(edcal.weeksPref + 3).weeks(), function() {
+
+                 equals(jQuery('#post-' + edcal.lastPostId).length, 1, 'The post should be added at ' + 
+                        d.toString(Date.CultureInfo.formatPatterns.longDate));
+
+                 edcal.moveTo(Date.today());
+                 start();
+                 edcal_test.testCreatePost();
              });
 
 
@@ -456,6 +492,68 @@ var edcal_test = {
           * the test cleans up after itself.
           */
          asyncTest('Delete the post created for testing', function() {
+             expect(1);
+
+             edcal.deletePost(edcal_test.post.id, function(res)
+                {
+                    if (!res.post) {
+                        ok(false, 'There was an error creating the new post.');
+                        start();
+                        return;
+                    }
+
+                    equals(jQuery('#post-' + res.post.id).length, 0, 'The post should now be deleted from the calendar.');
+                    start();
+                    
+                    edcal_test.testCreateDraftDrawerPost();
+
+                });
+         });
+    },
+
+    testCreateDraftDrawerPost: function() {
+         /*
+          * Now we'll create a new post in the drafts drawer
+          */
+
+         asyncTest('Create a new drafts drawer post', function() {
+             expect(2);
+
+             edcal_test.post.title = 'Unit Test Drafts Drawer Post';
+             edcal_test.post.content = edcal_test.testContent;
+             edcal_test.post.status = 'draft';
+             edcal_test.post.time = edcal.NO_DATE;
+             edcal_test.post.date = edcal.NO_DATE;
+             edcal_test.post.id = '0';
+
+             edcal.savePost(edcal_test.post, false, false, function(res) {
+                 if (!res.post) {
+                     ok(false, 'There was an error creating the new post.');
+                     start();
+                     return;
+                 }
+
+                 equals(res.post.title, edcal_test.post.title, 'The resulting post should have the same title as the request');
+
+                 equals(jQuery('#post-' + res.post.id).length, 1, 'The post should be added in only one place in the calendar.');
+
+                 edcal_test.post = res.post;
+                 
+                 start();
+
+                 edcal_test.testDeleteDraftDrawerPost();
+             });
+         });
+
+    },
+
+    testDeleteDraftDrawerPost: function() {
+
+         /*
+          * The last step is to delete the post we made so
+          * the test cleans up after itself.
+          */
+         asyncTest('Delete the post created for drafts drawer testing', function() {
              expect(1);
 
              edcal.deletePost(edcal_test.post.id, function(res)

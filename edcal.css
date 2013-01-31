@@ -234,7 +234,7 @@ html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockq
 
 /* Rows */
 
-.row {
+.edcal_row {
     height: 100%;
 }
 
@@ -593,3 +593,11 @@ TinyMCE Rich Editor and Media buttons are not currently used
     margin-left: 1em;
 }
 
+
+#moveToToday {
+    margin-left: 1.5em;
+}
+
+.tablenav .tablenav-pages a {
+    background-position-y: -380px;
+}

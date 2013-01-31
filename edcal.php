@@ -18,18 +18,18 @@
 /*
 Plugin Name: WordPress Editorial Calendar
 Description: The Editorial Calendar makes it possible to see all your posts and drag and drop them to manage your blog.
-Version: 2.0
+Version: 2.6
 Author: Colin Vernon, Justin Evans, Joachim Kudish, Mary Vogt, and Zack Grossbart
 Author URI: http://www.zackgrossbart.com
 Plugin URI: http://stresslimitdesign.com/editorial-calendar-plugin
 */
 
 
-
-global $edcal;
-if( empty($edcal) )
-	$edcal = new EdCal();
-
+if ( is_admin() ) {
+    global $edcal;
+    if ( empty($edcal) )
+        $edcal = new EdCal();
+}
 
 
 /*
@@ -48,12 +48,11 @@ define( 'EDCAL_PERMISSION_ERROR', 5 );
 define( 'EDCAL_NONCE_ERROR', 6 );
 
 class EdCal {
-	
-	protected $supports_custom_types;
+    
+    protected $supports_custom_types;
     protected $default_time;
 
     function __construct() {
-
         add_action('wp_ajax_edcal_saveoptions', array(&$this, 'edcal_saveoptions'));
         add_action('wp_ajax_edcal_changedate', array(&$this, 'edcal_changedate'));
         add_action('wp_ajax_edcal_savepost', array(&$this, 'edcal_savepost'));
@@ -92,30 +91,30 @@ class EdCal {
     /*
      * This function adds our calendar page to the admin UI
      */
-	function edcal_list_add_management_page() {
-	    if (function_exists('add_management_page') ) {
-	        $page = add_posts_page( __('Calendar', 'editorial-calendar'), __('Calendar', 'editorial-calendar'), 'edit_posts', 'cal', array(&$this, 'edcal_list_admin'));
-	        add_action( "admin_print_scripts-$page", array(&$this, 'edcal_scripts'));
+    function edcal_list_add_management_page() {
+        if (function_exists('add_management_page') ) {
+            $page = add_posts_page( __('Calendar', 'editorial-calendar'), __('Calendar', 'editorial-calendar'), 'edit_posts', 'cal', array(&$this, 'edcal_list_admin'));
+            add_action( "admin_print_scripts-$page", array(&$this, 'edcal_scripts'));
 
-	        if( $this->supports_custom_types ) {
+            if( $this->supports_custom_types ) {
 
-		        /* 
-		         * We add one calendar for Posts and then we add a separate calendar for each
-		         * custom post type.  This calendar will have an URL like this:
-		         * /wp-admin/edit.php?post_type=podcasts&page=cal_podcasts
-		         *
-		         * We can then use the post_type parameter to show the posts of just that custom
-		         * type and update the labels for each post type.
-		         */
-		        $args = array(
-		            'public'   => true,
-		            '_builtin' => false
-		        ); 
-		        $output = 'names'; // names or objects
-		        $operator = 'and'; // 'and' or 'or'
-		        $post_types = get_post_types($args,$output,$operator); 
+                /* 
+                 * We add one calendar for Posts and then we add a separate calendar for each
+                 * custom post type.  This calendar will have an URL like this:
+                 * /wp-admin/edit.php?post_type=podcasts&page=cal_podcasts
+                 *
+                 * We can then use the post_type parameter to show the posts of just that custom
+                 * type and update the labels for each post type.
+                 */
+                $args = array(
+                    'public'   => true,
+                    '_builtin' => false
+                ); 
+                $output = 'names'; // names or objects
+                $operator = 'and'; // 'and' or 'or'
+                $post_types = get_post_types($args,$output,$operator); 
 
-		        foreach ($post_types as $post_type) {
+                foreach ($post_types as $post_type) {
                     $show_this_post_type = apply_filters("edcal_show_calendar_$post_type", true);
                     if ($show_this_post_type) {
                         $page = add_submenu_page('edit.php?post_type=' . $post_type, __('Calendar', 'editorial-calendar'), __('Calendar', 'editorial-calendar'), 'edit_posts', 'cal_' . $post_type, array(&$this, 'edcal_list_admin'));
@@ -123,8 +122,8 @@ class EdCal {
                     }
                 }    
             }
-	    }
-	}
+        }
+    }
     
     /*
      * This is a utility function to open a file add it to our
@@ -143,7 +142,6 @@ class EdCal {
      * generates the divs that we need for the JavaScript to work.
      */
     function edcal_list_admin() {
-        include_once('edcal.php');
         
         /*
          * We want to count the number of times they load the calendar
@@ -174,7 +172,7 @@ class EdCal {
         echo '<style type="text/css">';
         $this->edcal_echoFile(dirname( __FILE__ ) . "/lib/timePicker.css");
         echo '</style>';
-    	
+        
         echo '<!-- This is the styles from humanmsg.css -->';
         echo '<style type="text/css">';
         $this->edcal_echoFile(dirname( __FILE__ ) . "/lib/humanmsg.css");
@@ -202,6 +200,7 @@ class EdCal {
         <!-- This is just a little script so we can pass the AJAX URL and some localized strings -->
         <script type="text/javascript">
             jQuery(document).ready(function(){
+                edcal.plugin_url = '<?php echo(plugins_url("/", __FILE__ )); ?>';
                 edcal.wp_nonce = '<?php echo wp_create_nonce("edit-calendar"); ?>';
                 <?php 
                     if (get_option("edcal_weeks_pref") != "") {
@@ -234,7 +233,7 @@ class EdCal {
                 <?php
                     }
                 ?>
-    
+                
                 <?php 
                     if (get_option("edcal_do_feedback") != "done") {
                 ?>
@@ -244,6 +243,8 @@ class EdCal {
                     }
                 ?>
     
+                <?php $this->edcal_getLastPost(); ?>
+                
                 edcal.startOfWeek = <?php echo(get_option("start_of_week")); ?>;
                 edcal.timeFormat = "<?php echo(get_option("time_format")); ?>";
                 edcal.previewDateFormat = "MMMM d";
@@ -317,7 +318,7 @@ class EdCal {
                 edcal.str_opt_time = <?php echo($this->edcal_json_encode(__('Time of day', 'editorial-calendar'))) ?>;
                 edcal.str_fatal_error = <?php echo($this->edcal_json_encode(__('An error occurred while loading the calendar: ', 'editorial-calendar'))) ?>;
                 
-                edcal.str_weekserror = <?php echo($this->edcal_json_encode(__('The calendar can only show between 1 and 5 weeks at a time.', 'editorial-calendar'))) ?>;
+                edcal.str_weekserror = <?php echo($this->edcal_json_encode(__('The calendar can only show between 1 and 8 weeks at a time.', 'editorial-calendar'))) ?>;
                 edcal.str_weekstt = <?php echo($this->edcal_json_encode(__('Select the number of weeks for the calendar to show.', 'editorial-calendar'))) ?>;
 
                 edcal.str_showdrafts = <?php echo($this->edcal_json_encode(__('Show Unscheduled Drafts'))) ?>;
@@ -343,19 +344,19 @@ class EdCal {
     
         <style type="text/css">
             .loadingclass > .postlink, .loadingclass:hover > .postlink, .tiploading {
-                background-image: url('<?php echo(path_join(WP_PLUGIN_URL, basename( dirname( __FILE__ ) )."/../../../wp-admin/images/loading.gif")); ?>');
+                background-image: url('<?php echo(admin_url("images/loading.gif", __FILE__ )); ?>');
             }
     
             #loading {
-                background-image: url('<?php echo(path_join(WP_PLUGIN_URL, basename( dirname( __FILE__ ) )."/../../../wp-admin/images/loading.gif")); ?>');
+                background-image: url('<?php echo(admin_url("images/loading.gif", __FILE__ )); ?>');
             }
     
             #tipclose {
-                background-image: url('<?php echo(path_join(WP_PLUGIN_URL, basename( dirname( __FILE__ ) )."/images/tip_close.png")); ?>');
+                background-image: url('<?php echo(plugins_url("images/tip_close.png", __FILE__ )); ?>');
             }
     
             .day.today .daylabel {
-                background: url('<?php echo(path_join(WP_PLUGIN_URL, basename( dirname( __FILE__ ) )."/../../../wp-admin/images/button-grad.png")); ?>') repeat-x left top;
+                background: url('<?php echo(admin_url("images/button-grad.png", __FILE__ )); ?>') repeat-x left top;
             }
     
         </style>
@@ -363,7 +364,11 @@ class EdCal {
         <?php
         echo '<!-- This is the code from edcal.js -->';
         echo '<script type="text/javascript">';
-        $this->edcal_echoFile(dirname( __FILE__ ) . "/edcal.js");
+        if (isset($_GET['debug'])) {
+            $this->edcal_echoFile(dirname( __FILE__ ) . "/edcal.js");
+        } else {
+            $this->edcal_echoFile(dirname( __FILE__ ) . "/edcal.min.js");
+        }
         echo '</script>';
         
         ?>
@@ -379,16 +384,19 @@ class EdCal {
             <div id="topbar" class="tablenav clearfix">
                 <div id="topleft" class="tablenav-pages alignleft">
                     <h3>
-                        <a href="#" title="<?php echo(__('Jump back', 'editorial-calendar')) ?>" class="prev page-numbers" id="prevmonth">&laquo;</a>
+                        <a href="#" title="<?php echo(__('Jump back', 'editorial-calendar')) ?>" class="prev page-numbers" id="prevmonth">&lsaquo;</a>
                         <span id="currentRange"></span>
-                        <a href="#" title="<?php echo(__('Skip ahead', 'editorial-calendar')) ?>" class="next page-numbers" id="nextmonth">&raquo;</a>
+                        <a href="#" title="<?php echo(__('Skip ahead', 'editorial-calendar')) ?>" class="next page-numbers" id="nextmonth">&rsaquo;</a>
+                        <a class="next page-numbers" title="<?php echo(__('Scroll the calendar and make the last post visible', 'editorial-calendar')) ?>" id="moveToLast">&raquo;</a>
 
-	                    <a class="save button" title="<?php echo(__('Scroll the calendar and make the today visible', 'editorial-calendar')) ?>" id="moveToToday"><?php echo(__('Show Today', 'editorial-calendar')) ?></a>
+                        <a class="next page-numbers" title="<?php echo(__('Scroll the calendar and make the today visible', 'editorial-calendar')) ?>" id="moveToToday"><?php echo(__('Show Today', 'editorial-calendar')) ?></a>
+                        
+                        
                     </h3>
                 </div>
 
                 <div id="topright" class="tablenav-pages alignright">
-	                <a class="save button" title="<?php echo(__('Show unscheduled posts', 'editorial-calendar')) ?>" id="showdraftsdrawer"><?php echo(__('Show Drafts', 'editorial-calendar')) ?></a>
+                    <a class="next page-numbers" title="<?php echo(__('Show unscheduled posts', 'editorial-calendar')) ?>" id="showdraftsdrawer"><?php echo(__('Show Unscheduled Drafts', 'editorial-calendar')) ?></a>
                 </div>
             </div>
             
@@ -428,14 +436,14 @@ class EdCal {
               <a href="#" id="tipclose" onclick="edcal.hideForm(); return false;" title="close"> </a>
             </div>
     
-    			<div class="edcal_quickedit inline-edit-row">
+                <div class="edcal_quickedit inline-edit-row">
     
                     <fieldset>
     
                     <label>
-    					<span class="title"><?php _e('Title', 'editorial-calendar') ?></span>
-    					<span class="input-text-wrap"><input type="text" class="ptitle" id="edcal-title-new-field" name="title" /></span>
-        			</label>
+                        <span class="title"><?php _e('Title', 'editorial-calendar') ?></span>
+                        <span class="input-text-wrap"><input type="text" class="ptitle" id="edcal-title-new-field" name="title" /></span>
+                    </label>
     
                     <label>
                         <span class="title"><?php _e('Content', 'editorial-calendar') ?></span>
@@ -469,7 +477,7 @@ class EdCal {
     */ ?>
                     </fieldset>
     
-    				<p class="submit inline-edit-save" id="edit-slug-buttons">
+                    <p class="submit inline-edit-save" id="edit-slug-buttons">
                         <a class="button-primary disabled" id="newPostScheduleButton" href="#"><?php _e('Schedule', 'editorial-calendar') ?></a>
                         <a href="#" onclick="edcal.hideForm(); return false;" class="button-secondary cancel"><?php _e('Cancel', 'editorial-calendar') ?></a>
                     </p>
@@ -506,18 +514,18 @@ class EdCal {
          * locale.  We can do this based on the locale in the localized bundle to make sure the date locale matches
          * the locale for the other strings.
          */
-        wp_enqueue_script( "date", path_join(WP_PLUGIN_URL, basename( dirname( __FILE__ ) )."/lib/languages/date-".__('en-US', 'editorial-calendar').".js"), array( 'jquery' ) );
-        wp_enqueue_script( 'jquery' );
-        wp_enqueue_script( 'jquery-ui-draggable' );
-        wp_enqueue_script( 'jquery-ui-droppable' );
+        wp_enqueue_script('jquery');
+        wp_enqueue_script('jquery-ui-draggable');
+        wp_enqueue_script('jquery-ui-droppable');
     
-    	//wp_enqueue_script( "date-extras", path_join(WP_PLUGIN_URL, basename( dirname( __FILE__ ) )."/lib/date.extras.js"), array( 'jquery' ) );
+        //wp_enqueue_script("date-extras", plugins_url("lib/date.extras.js", __FILE__ ), array( 'jquery' ));
     
-        wp_enqueue_script( "edcal-lib", path_join(WP_PLUGIN_URL, basename( dirname( __FILE__ ) )."/lib/edcallib.min.js"), array( 'jquery' ) );
+        wp_enqueue_script("edcal-date", plugins_url("lib/languages/date-".__('en-US', 'editorial-calendar').".js", __FILE__ ));
+        wp_enqueue_script("edcal-lib", plugins_url("lib/edcallib.min.js", __FILE__ ), array( 'jquery' ));
     
         if (isset($_GET['qunit'])) {
-            wp_enqueue_script( "qunit", path_join(WP_PLUGIN_URL, basename( dirname( __FILE__ ) )."/lib/qunit.js"), array( 'jquery' ) );
-            wp_enqueue_script( "edcal-test", path_join(WP_PLUGIN_URL, basename( dirname( __FILE__ ) )."/edcal_test.js"), array( 'jquery' ) );
+            wp_enqueue_script("qunit", plugins_url("lib/qunit.js", __FILE__ ), array( 'jquery' ));
+            wp_enqueue_script("edcal-test", plugins_url("edcal_test.js", __FILE__ ), array( 'jquery' ));
         }
         
         return;
@@ -526,14 +534,14 @@ class EdCal {
          * If you're using one of the specific libraries you should comment out the two lines
          * above this comment.
          */
-        wp_enqueue_script( "bgiframe", path_join(WP_PLUGIN_URL, basename( dirname( __FILE__ ) )."/lib/jquery.bgiframe.js"), array( 'jquery' ) );
-        wp_enqueue_script( "humanMsg", path_join(WP_PLUGIN_URL, basename( dirname( __FILE__ ) )."/lib/humanmsg.js"), array( 'jquery' ) );
-        wp_enqueue_script( "jquery-timepicker", path_join(WP_PLUGIN_URL, basename( dirname( __FILE__ ) )."/lib/jquery.timepicker.js"), array( 'jquery' ) );
-    	
-        wp_enqueue_script( "scrollable", path_join(WP_PLUGIN_URL, basename( dirname( __FILE__ ) )."/lib/tools.scrollable-1.1.2.js"), array( 'jquery' ) );
-        wp_enqueue_script( "mouse-wheel", path_join(WP_PLUGIN_URL, basename( dirname( __FILE__ ) )."/lib/tools.scrollable.mousewheel-1.0.1.js"), array( 'jquery' ) );
+        wp_enqueue_script("bgiframe", plugins_url("lib/jquery.bgiframe.js", __FILE__ ), array( 'jquery' ));
+        wp_enqueue_script("humanMsg", plugins_url("lib/humanmsg.js", __FILE__ ), array( 'jquery' ));
+        wp_enqueue_script("jquery-timepicker", plugins_url("lib/jquery.timepicker.js", __FILE__ ), array( 'jquery' ));
+        
+        wp_enqueue_script("scrollable", plugins_url("lib/tools.scrollable-1.1.2.js", __FILE__ ), array( 'jquery' ));
+        wp_enqueue_script("mouse-wheel", plugins_url("lib/lib/tools.scrollable.mousewheel-1.0.1.js", __FILE__ ), array( 'jquery' ));
     
-        wp_enqueue_script( "json-parse2", path_join(WP_PLUGIN_URL, basename( dirname( __FILE__ ) )."/lib/json2.js"), array( 'jquery' ) );
+        wp_enqueue_script("json-parse2", plugins_url("lib/json2.js", __FILE__ ), array( 'jquery' ));
     }
     
     /*
@@ -588,7 +596,7 @@ class EdCal {
         <?php
         $size = sizeof($myposts);
         
-        for($i = 0; $i < $size; $i++) {	
+        for($i = 0; $i < $size; $i++) {    
             $post = $myposts[$i];
             $this->edcal_postJSON($post, $i < $size - 1);
         }
@@ -600,22 +608,62 @@ class EdCal {
     }
     
     /*
+     * This filter specifies a special WHERE clause so we just get the posts we're 
+     * interested in for the last post.
+     */
+    function edcal_lastpost_filter_where($where = '') {
+        $where .= " AND (`post_status` = 'draft' OR `post_status` = 'publish' OR `post_status` = 'future')";
+        return $where;
+    }
+    
+    /*
+     * Get information about the last post (the one furthest in the future) and make
+     * that information available to the JavaScript code so it can make the last post
+     * button work.
+     */
+    function edcal_getLastPost() {
+        $args = array(
+            'posts_per_page' => 1,
+            'post_parent' => null,
+            'order' => 'DESC'
+        );
+        
+        add_filter( 'posts_where', array(&$this, 'edcal_lastpost_filter_where' ));
+        $myposts = query_posts($args);
+        remove_filter( 'posts_where', array(&$this, 'edcal_lastpost_filter_where' ));
+        
+        if (sizeof($myposts) > 0) {
+            $post = $myposts[0];
+            setup_postdata($post);
+            ?>
+            edcal.lastPostDate = '<?php echo(date('dmY',strtotime($post->post_date))); ?>';
+            edcal.lastPostId = '<?php echo($post->ID); ?>';
+            <?php
+        } else {
+            ?>
+            edcal.lastPostDate = '-1';
+            edcal.lastPostId = '-1';
+            <?php
+        }
+    }
+    
+    /*
      * This is for an AJAX call that returns a post with the specified ID
      */
     function edcal_getpost() {
-    	
-    	header("Content-Type: application/json");
+        
+        header("Content-Type: application/json");
         $this->edcal_addNoCacheHeaders();
-    	
-    	// If nonce fails, return
-    	if (!$this->edcal_checknonce()) {
+        
+        // If nonce fails, return
+        if (!$this->edcal_checknonce()) {
             die();
         }
-    	
-    	$post_id = isset($_GET['postid'])?intval($_GET['postid']):-1;
-    	
-    	// If a proper post_id wasn't passed, return
-    	if(!$post_id) die();
+        
+        $post_id = isset($_GET['postid'])?intval($_GET['postid']):-1;
+        
+        // If a proper post_id wasn't passed, return
+        if(!$post_id) die();
         
         $args = array(
             'post__in' => array($post_id)
@@ -629,23 +677,23 @@ class EdCal {
         if ($post_type) {
             $args['post_type'] = $post_type;
         }
-    	
-    	$post = query_posts($args);
         
-    	// get_post and setup_postdata don't get along, so we're doing a mini-loop
-    	if(have_posts()) :
-    		while(have_posts()) : the_post();
-    			?>
-    			{
-    			"post" :
-    				<?php
-    				$this->edcal_postJSON($post[0], false, true);
-    				?>
-    			}
-    			<?php
-    		endwhile;
-    	endif;
-    	die();
+        $post = query_posts($args);
+        
+        // get_post and setup_postdata don't get along, so we're doing a mini-loop
+        if(have_posts()) :
+            while(have_posts()) : the_post();
+                ?>
+                {
+                "post" :
+                    <?php
+                    $this->edcal_postJSON($post[0], false, true);
+                    ?>
+                }
+                <?php
+            endwhile;
+        endif;
+        die();
     }
     
     /*
@@ -727,17 +775,28 @@ class EdCal {
          * and this extra data will become useful.  Right now we
          * are using this data for the title on the quick edit form.
          */
-    	if( $this->supports_custom_types ) {
-    	    $postTypeObj = get_post_type_object(get_post_type( $post ));
-    	    $postTypeTitle = $postTypeObj->labels->singular_name;
-    	} else {
-    	    $postTypeTitle = 'post';
-    	}
+        if( $this->supports_custom_types ) {
+            $postTypeObj = get_post_type_object(get_post_type( $post ));
+            $postTypeTitle = $postTypeObj->labels->singular_name;
+        } else {
+            $postTypeTitle = 'post';
+        }
 
         $post_date_gmt = date('dmY',strtotime($post->post_date_gmt));
         if ($post_date_gmt == '01011970') {
             $post_date_gmt = '00000000';
         }
+        
+        /*
+         * The date function in PHP isn't consistent in the way it handles
+         * formatting dates that are all zeros.  In that case we can manually
+         * format the all zeros date so it shows up properly.
+         */
+        if ($post->post_date_gmt == '0000-00-00 00:00:00') {
+            $post_date_gmt = '00000000';
+        }
+        
+        
         ?>
             {
                 "date" : "<?php the_time('d') ?><?php the_time('m') ?><?php the_time('Y') ?>", 
@@ -747,26 +806,27 @@ class EdCal {
                 "sticky" : "<?php echo is_sticky($post->ID) ?>",
                 "url" : "<?php $this->edcal_json_encode(the_permalink()) ?>", 
                 "status" : "<?php echo get_post_status() ?>",
+                "orig_status" : "<?php echo get_post_status() ?>",
                 "title" : <?php echo $this->edcal_json_encode(get_the_title()) ?>,
                 "author" : <?php echo $this->edcal_json_encode(get_the_author()) ?>,
                 "type" : "<?php echo get_post_type( $post ) ?>",
                 "typeTitle" : "<?php echo $postTypeTitle ?>",
     
                 <?php if ( current_user_can('edit_post', $post->ID) ) {?>
-                "editlink" : "<?php echo get_edit_post_link($id) ?>",
+                "editlink" : "<?php echo get_edit_post_link($post->ID) ?>",
                 <?php } ?>
     
                 <?php if ( current_user_can('delete_post', $post->ID) ) {?>
                 "dellink" : "javascript:edcal.deletePost(<?php echo $post->ID ?>)",
                 <?php } ?>
     
-                "permalink" : "<?php echo get_permalink($id) ?>",
+                "permalink" : "<?php echo get_permalink($post->ID) ?>",
                 "id" : "<?php the_ID(); ?>"
-    			
-    			<?php if($fullPost) : ?>
-    			, "content" : <?php echo $this->edcal_json_encode($post->post_content) ?>
-    			
-    			<?php endif; ?>
+                
+                <?php if($fullPost) : ?>
+                , "content" : <?php echo $this->edcal_json_encode($post->post_content) ?>
+                
+                <?php endif; ?>
             }
         <?php
         if ($addComma) {
@@ -781,46 +841,46 @@ class EdCal {
      * It is not called unless the user has permission to delete the post.
      */
     function edcal_deletepost() {
-    	if (!$this->edcal_checknonce()) {
-    		die();
-    	}
+        if (!$this->edcal_checknonce()) {
+            die();
+        }
     
         header("Content-Type: application/json");
         $this->edcal_addNoCacheHeaders();
         
         $edcal_postid = isset($_GET['postid'])?$_GET['postid']:null;
         $post = get_post($edcal_postid, ARRAY_A);
-    	$title = $post['post_title'];
-    	$date = date('dmY', strtotime($post['post_date'])); // [TODO] : is there a better way to generate the date string ... ??
+        $title = $post['post_title'];
+        $date = date('dmY', strtotime($post['post_date'])); // [TODO] : is there a better way to generate the date string ... ??
         $date_gmt = date('dmY',strtotime($post['post_date_gmt']));
         if ($date_gmt == '01011970') {
             $date_gmt = '00000000';
         }
         
-    	$force = !EMPTY_TRASH_DAYS;					// wordpress 2.9 thing. deleted post hangs around (ie in a recycle bin) after deleted for this # of days
-    	if ( $post->post_type == 'attachment' ) {
-    		$force = ( $force || !MEDIA_TRASH );
-    		if ( ! wp_delete_attachment($edcal_postid, $force) )
-    			wp_die( __('Error in deleting...') );
-    	} else {
-    		if ( !wp_delete_post($edcal_postid, $force) )
-    			wp_die( __('Error in deleting...') );
-    	}
+        $force = !EMPTY_TRASH_DAYS;                    // wordpress 2.9 thing. deleted post hangs around (ie in a recycle bin) after deleted for this # of days
+        if ( isset($post->post_type) && ($post->post_type == 'attachment' )) {
+            $force = ( $force || !MEDIA_TRASH );
+            if ( ! wp_delete_attachment($edcal_postid, $force) )
+                wp_die( __('Error in deleting...') );
+        } else {
+            if ( !wp_delete_post($edcal_postid, $force) )
+                wp_die( __('Error in deleting...') );
+        }
     
-    //	return the following info so that jQuery can then remove post from edcal display :
+    //    return the following info so that jQuery can then remove post from edcal display :
     ?>
     {
         "post" :
-    	{
+        {
             "date" : "<?php echo $date ?>", 
             "title" : "<?php echo $title ?>",
             "id" : "<?php echo $edcal_postid ?>",
             "date_gmt" : "<?php echo $date_gmt; ?>"
-    	}
+        }
     }
     <?php
     
-    	die();	
+        die();    
     }
     
     /*
@@ -924,10 +984,17 @@ class EdCal {
      * or update an existing post.
      */
     function edcal_savepost() {
-    	
-    	if (!$this->edcal_checknonce()) {
+        
+        if (!$this->edcal_checknonce()) {
             die();
         }
+        
+        // Most blogs have warnings turned off by default, but if they're
+        // turned on the warnings can cause errors in the JSON data when
+        // we change the post status so we set the warning level to hide
+        // warnings and then reset it at the end of this function.
+        $my_error_level = error_reporting();
+        error_reporting(E_ERROR);
     
         header("Content-Type: application/json");
         $this->edcal_addNoCacheHeaders();
@@ -936,21 +1003,38 @@ class EdCal {
         $edcal_date_gmt = isset($_POST["date_gmt"])?$_POST["date_gmt"]:get_gmt_from_date($edcal_date);
         
         $my_post = array();
-    	
-    	// If the post id is not specified, we're creating a new post
-    	if($_POST['id']) {
-    		$my_post['ID'] = intval($_POST['id']);
+        
+        // If the post id is not specified, we're creating a new post
+        if($_POST['id'] && intval($_POST['id']) > 0) {
+            $my_post['ID'] = intval($_POST['id']);
         } else {
-            $my_post['post_status'] = 'draft'; // if new post, set the status to draft
-        }
+            // We have a new post
+            //$my_post['ID'] = 0; // and the post ID to 0
             
+            // Set the status to draft unless the user otherwise specifies
+            if ($_POST['status']) {
+                $my_post['post_status'] = $_POST['status'];
+            } else {
+                $my_post['post_status'] = 'draft';
+            }
+        }
+        
         $my_post['post_title'] = isset($_POST["title"])?$_POST["title"]:null;
         $my_post['post_content'] = isset($_POST["content"])?$_POST["content"]:null;
         
-        $my_post['post_date'] = $edcal_date;
-        $my_post['post_date_gmt'] = $edcal_date_gmt;
-        $my_post['post_modified'] = $edcal_date;
-        $my_post['post_modified_gmt'] = $edcal_date_gmt;
+        if ($edcal_date_gmt != '0000-00-00 00:00:00' || $my_post['ID'] > 0) {
+            /*
+             * We don't want to set a date if this a new post in the drafts
+             * drawer since WordPress 3.5 will reject new posts with a 0000 
+             * GMT date.
+             */
+            $my_post['post_date'] = $edcal_date;
+            $my_post['post_date_gmt'] = $edcal_date_gmt;
+            $my_post['post_modified'] = $edcal_date;
+            $my_post['post_modified_gmt'] = $edcal_date_gmt;
+        }
+        
+        $my_post['post_status'] = $_POST['status'];
         
         /* 
          * When we create a new post we need to specify the post type
@@ -960,22 +1044,21 @@ class EdCal {
         if ($post_type) {
             $my_post['post_type'] = $post_type;
         }
-        
-        if($_POST['status']) {
-            wp_transition_post_status($_POST['status'], $my_post['post_status'], $my_post);
-            $my_post['post_status'] = $_POST['status'];
-        }
-        
-        
-        // Insert the post into the database
-    	if($my_post['ID']) {
-    		$my_post_id = wp_update_post( $my_post );
+
+        // If we are updating a post
+        if($_POST['id']) {
+            if ($_POST['status'] != $_POST['orig_status']) {
+                wp_transition_post_status($_POST['status'], $_POST['orig_status'], $my_post);
+                $my_post['post_status'] = $_POST['status'];
+            }
+            $my_post_id = wp_update_post($my_post);
         } else {
-            $my_post_id = wp_insert_post( $my_post );
+            // We have a new post, insert the post into the database
+            $my_post_id = wp_insert_post($my_post, true);
         }
-    		
-    	// TODO: throw error if update/insert or getsinglepost fails
-    	/*
+        
+        // TODO: throw error if update/insert or getsinglepost fails
+        /*
          * We finish by returning the latest data for the post in the JSON
          */
         $args = array(
@@ -985,22 +1068,25 @@ class EdCal {
         if ($post_type) {
             $args['post_type'] = $post_type;
         }
-    	$post = query_posts($args);
-    	
-    	// get_post and setup_postdata don't get along, so we're doing a mini-loop
-    	if(have_posts()) :
-    		while(have_posts()) : the_post();
-    			?>
-    			{
-    			"post" :
-    				<?php
-    				$this->edcal_postJSON($post[0], false);
-    				?>
-    			}
-    			<?php
-    		endwhile;
-    	endif;
-    	die();
+        $post = query_posts($args);
+        
+        // get_post and setup_postdata don't get along, so we're doing a mini-loop
+        if(have_posts()) :
+            while(have_posts()) : the_post();
+                ?>
+                {
+                "post" :
+                    <?php
+                    $this->edcal_postJSON($post[0], false);
+                    ?>
+                }
+                <?php
+            endwhile;
+        endif;
+        
+        error_reporting($my_error_level);
+        
+        die();
     }
     
     /*
@@ -1094,14 +1180,14 @@ class EdCal {
              */
             $error = EDCAL_PERMISSION_ERROR;
         } else if ( date('Y-m-d', strtotime($post->post_date)) != date('Y-m-d', strtotime($edcal_oldDate)) ) {
-	        /*
-	         * We are doing optimistic concurrency checking on the dates.  If
-	         * the user tries to move a post we want to make sure nobody else
-	         * has moved that post since the page was last updated.  If the 
-	         * old date in the database doesn't match the old date from the
-	         * browser then we return an error to the browser along with the
-	         * updated post data.
-	         */
+            /*
+             * We are doing optimistic concurrency checking on the dates.  If
+             * the user tries to move a post we want to make sure nobody else
+             * has moved that post since the page was last updated.  If the 
+             * old date in the database doesn't match the old date from the
+             * browser then we return an error to the browser along with the
+             * updated post data.
+             */
             $error = EDCAL_CONCURRENCY_ERROR;
         }
 
@@ -1127,9 +1213,9 @@ class EdCal {
         $updated_post = array();
         $updated_post['ID'] = $edcal_postid;
 
-		if ( !$move_to_drawer ) {
-	        $updated_post['post_date'] = $edcal_newDate . substr($post->post_date, strlen($edcal_newDate));
-		}
+        if ( !$move_to_drawer ) {
+            $updated_post['post_date'] = $edcal_newDate . substr($post->post_date, strlen($edcal_newDate));
+        }
 
         /*
          * When a user creates a draft and never sets a date or publishes it 
@@ -1140,18 +1226,18 @@ class EdCal {
          */
         $needsEditDate = preg_match( '/^0000/', $post->post_date_gmt );
 
-		if ( $needsEditDate ) {
-			// echo "\r\nneeds edit date\r\n";
+        if ( $needsEditDate ) {
+            // echo "\r\nneeds edit date\r\n";
             $updated_post['edit_date'] = $edcal_newDate . substr($post->post_date, strlen($edcal_newDate));
         }
 
         if ( $move_to_drawer ) {
             $updated_post['post_date_gmt'] = "0000-00-00 00:00:00";
             $updated_post['edit_date'] = $post->post_date;
-		} else if ( $move_from_drawer ) {
+        } else if ( $move_from_drawer ) {
             $updated_post['post_date_gmt'] = get_gmt_from_date($post->post_date);
             $updated_post['post_modified_gmt'] = get_gmt_from_date($post->post_date);
-		}
+        }
 
         /*
          * We need to make sure to use the GMT formatting for the date.
@@ -1285,3 +1371,4 @@ class EdCal {
 
 }
 
+?>

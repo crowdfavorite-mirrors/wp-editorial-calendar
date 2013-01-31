@@ -1,9 +1,9 @@
-﻿=== Editorial Calendar ===
+=== Editorial Calendar ===
 Contributors: cvernon, justinstresslimit, jkudish, MaryVogt, zgrossbart
 Tags: posts, post, calendar, AJAX, admin, administration
 Requires at least: 2.8.5
-Tested up to: 3.3.2
-Stable tag: 2.0
+Tested up to: 3.5
+Stable tag: 2.6
 
 The Editorial Calendar makes it possible to see all your posts and drag and drop them to manage your blog.
 
@@ -13,7 +13,7 @@ Did you remember to write a post for next Tuesday?  What about the Tuesday after
 
 <h4>Watch the video</h4>
 
-[vimeo http://vimeo.com/13196017]
+[vimeo http://vimeo.com/47251750]
 
 <h4>Try it out</h4>
 Try the calendar before you install it.  Check out the demo installation at <a href="http://www.zackgrossbart.com/extras/sandbox/wp-admin/edit.php?page=cal">Zack's WordPress Sandbox</a>.
@@ -60,8 +60,8 @@ From time to time people write articles about the editorial calendar.  We apprec
 
 <a href="http://www.smashingmagazine.com/2010/08/30/the-importance-of-consistency-using-editorial-calendars-and-style-guides/">Blogging For Web Designers: Editorial Calendars and Style Guides</a> by <a href="http://jessica.smashingmagazine.com/">Jessica Bordeau</a> at <a href="http://www.smashingmagazine.com/">Smashing Magazine</a>
 
-<a href="http://thebloggingacademy.com/editorial-calendar-wordpress-plugin-review/">
-Editorial Calendar WordPress plugin review</a> by <a href="http://thebloggingacademy.com/">The Blogging Academy</a>
+<a href="http://mydigitalinternet.com/2010/editorial-calendar-wordpress-plugin-review">
+Editorial Calendar WordPress plugin review</a> by Stephen Duckworth at <a href="http://mydigitalinternet.com/">My Digital Internet</a>
 
 <a href="http://www.disruptiveconversations.com/2010/09/brogan-is-right-the-editorial-calendar-wordpress-plugin-truly-rocks.html">Brogan is right - the "Editorial Calendar" WordPress plugin truly rocks!</a> by <a href="http://www.danyork.com/">Dan York</a>
 
@@ -109,7 +109,7 @@ The editorial calendar follows the Week Starts On preference on the WordPress Ge
 
 = What languages does the calendar support? =
 
-The calendar is available in Brazilian Portuguese, Croatian, Czech, Dutch, English, French, German, Greek, Hebrew, Japanese, Lithuanian, Norwegian, Polish, Spanish, and Swedish. 
+The calendar is available in Brazilian Portuguese, Croatian, Czech, Dutch, English, French, German, Greek, Hebrew, Japanese, Lithuanian, Norwegian, Polish, Russian, Spanish, and Swedish. 
 
 = Can I add new languages? =
 
@@ -121,7 +121,7 @@ The calendar is written in JavaScript.  It contacts your blog when it scrolls to
 
 = Is the calendar collecting data about my blog? =
 
-After you use the calendar a few times we'll prompt you to let us collect a little anonymous data about your blog.  Information like the size of your browser window and the number of posts you have per day help us make the calendar even better.
+After you use the calendar a few times we'll prompt you to let us collect a little data about your blog.  Information like the size of your browser window and the number of posts you have per day help us make the calendar even better.
 
 The collected data is all available to the public.  Check out the <a href="http://www.zackgrossbart.com/edcal/mint/">Editorial Calendar Statistics</a>.
 
@@ -172,6 +172,58 @@ Moving published posts can cause problems with some RSS feeds and is generally n
 7. Use the new unscheduled drafts section to manage drafts before you schedule them.
 
 == Changelog ==
+
+= 2.6 = 
+
+Fixed some layout issues with the previous and next calendar buttons in WordPress 3.5.
+
+We are now properly saving new posts in the drafts drawer in WordPress 3.5.
+
+Added unit tests to cover creating a new post in the drafts drawer.
+
+Added a few performance improvements to the calendar like making sure we only load our code in the admin console.
+
+= 2.5 =
+
+The calendar is now handling the post ID in the same way for each call it uses to get data about each post when returning post data to the calendar to avoid some PHP warnings.
+
+The calendar is now more careful about PHP warnings so it still works if the blog is set to show PHP warnings.
+
+The unit tests are now using the correct CSS reference so they show up properly.
+
+Moved the setting for the default post time to the edcal.php so it's easier to change without recompiling the JavaScript.
+
+The calendar now supports Russian thanks to Danny Zawacki and Lyudmila Kostryka.  Danny blogs at http://dannyzawacki.com
+
+We have started to namespace css classes to avoid conflicts with other plugins & themes. 
+
+= 2.4 =
+
+Creating a new unscheduled draft is now working properly from the calendar.
+
+= 2.3 = 
+
+The calendar is now loading relative URLs for CSS, JavaScript, and image files using the right API so they load properly when using SSL.
+
+= 2.2.1 =
+
+Fixed a memory leak in the calendar where the calendar doesn't load if you have too many posts in your blog.
+
+= 2.2 =
+
+The calendar is using JavaScript compression to load less data and run faster.
+
+We've added a new mechanism to load the unscheduled drafts which spaces out the loading so the calendar responds super fast even when you have hundreds of unscheduled drafts.
+
+Added a new button to jump to the last post in the calendar.
+
+Added a namespace to fix a small issue of potential JavaScript file conflict with wp_enqueue_script().
+
+= 2.1 =
+
+The calendar now moves posts from the drafts drawer to the main calendar properly on blogs with the alternate functionality of the date function.
+
+The calendar can now display up to eight weeks at a time instead of just five.
 
 = 2.0 =
 

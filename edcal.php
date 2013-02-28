@@ -18,7 +18,7 @@
 /*
 Plugin Name: WordPress Editorial Calendar
 Description: The Editorial Calendar makes it possible to see all your posts and drag and drop them to manage your blog.
-Version: 2.6
+Version: 2.7
 Author: Colin Vernon, Justin Evans, Joachim Kudish, Mary Vogt, and Zack Grossbart
 Author URI: http://www.zackgrossbart.com
 Plugin URI: http://stresslimitdesign.com/editorial-calendar-plugin
@@ -355,10 +355,6 @@ class EdCal {
                 background-image: url('<?php echo(plugins_url("images/tip_close.png", __FILE__ )); ?>');
             }
     
-            .day.today .daylabel {
-                background: url('<?php echo(admin_url("images/button-grad.png", __FILE__ )); ?>') repeat-x left top;
-            }
-    
         </style>
         
         <?php
@@ -499,6 +495,18 @@ class EdCal {
         if ($edcal_startDate == '00000000') {
             $where .= " AND post_date_gmt LIKE '0000%'";
         } else {
+            /*
+             * The start date and end date come from the client and we want to make
+             * sure there's no SQL injection attack here.  We know these values must
+             * be dates in a format like 2013-02-03.  Date parsing is complex and PHP
+             * dates allow a lot of different formats.  The simplest way to make sure
+             * this isn't a SQL injection attack is to remove the dashes and check if
+             * the result is numeric.  If it is then this can't be a SQL injection attack.
+             */
+             if (!is_numeric(str_replace("-", "", $edcal_startDate)) || !is_numeric(str_replace("-", "", $edcal_endDate))) {
+                die("The specified start date and end date for the posts query must be numeric.");
+             }
+             
             $where .= " AND post_date >= '" . $edcal_startDate . "' AND post_date < '" . $edcal_endDate . "' AND post_date_gmt NOT LIKE '0000%'";
         }
         return $where;
@@ -849,6 +857,11 @@ class EdCal {
         $this->edcal_addNoCacheHeaders();
         
         $edcal_postid = isset($_GET['postid'])?$_GET['postid']:null;
+        
+        if (!current_user_can('delete_post', $edcal_postid)) {
+            die("You don't have permission to delete this post");
+        }
+        
         $post = get_post($edcal_postid, ARRAY_A);
         $title = $post['post_title'];
         $date = date('dmY', strtotime($post['post_date'])); // [TODO] : is there a better way to generate the date string ... ??
@@ -902,7 +915,7 @@ class EdCal {
         $post = get_post($edcal_postid, ARRAY_A);
         setup_postdata($post);
         
-        $post['post_title'] = $edcal_newTitle;
+        $post['post_title'] = wp_strip_all_tags($edcal_newTitle);
         
         /*
          * Now we finally update the post into the database
@@ -948,7 +961,7 @@ class EdCal {
         $edcal_date = isset($_POST["date"])?$_POST["date"]:null;
         
         $my_post = array();
-        $my_post['post_title'] = isset($_POST["title"])?$_POST["title"]:null;
+        $my_post['post_title'] = isset($_POST["title"])?wp_strip_all_tags($_POST["title"]):null;
         $my_post['post_content'] = isset($_POST["content"])?$_POST["content"]:null;
         $my_post['post_status'] = 'draft';
         
@@ -1019,7 +1032,7 @@ class EdCal {
             }
         }
         
-        $my_post['post_title'] = isset($_POST["title"])?$_POST["title"]:null;
+        $my_post['post_title'] = isset($_POST["title"])?wp_strip_all_tags($_POST["title"]):null;
         $my_post['post_content'] = isset($_POST["content"])?$_POST["content"]:null;
         
         if ($edcal_date_gmt != '0000-00-00 00:00:00' || $my_post['ID'] > 0) {

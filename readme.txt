@@ -2,8 +2,8 @@
 Contributors: cvernon, justinstresslimit, jkudish, MaryVogt, zgrossbart
 Tags: posts, post, calendar, AJAX, admin, administration
 Requires at least: 2.8.5
-Tested up to: 3.5
-Stable tag: 2.6
+Tested up to: 3.5.1
+Stable tag: 2.7
 
 The Editorial Calendar makes it possible to see all your posts and drag and drop them to manage your blog.
 
@@ -109,7 +109,7 @@ The editorial calendar follows the Week Starts On preference on the WordPress Ge
 
 = What languages does the calendar support? =
 
-The calendar is available in Brazilian Portuguese, Croatian, Czech, Dutch, English, French, German, Greek, Hebrew, Japanese, Lithuanian, Norwegian, Polish, Russian, Spanish, and Swedish. 
+The calendar is available in Brazilian Portuguese, Croatian, Czech, Dutch, English, French, German, Greek, Hebrew, Italian, Japanese, Lithuanian, Norwegian, Polish, Russian, Spanish, and Swedish. 
 
 = Can I add new languages? =
 
@@ -172,6 +172,20 @@ Moving published posts can cause problems with some RSS feeds and is generally n
 7. Use the new unscheduled drafts section to manage drafts before you schedule them.
 
 == Changelog ==
+
+= 2.7 = 
+
+The calendar is now available in Italian thanks to Lorenzo Boldorini who blogs at http://www.webqbe.it.
+
+Changed all calls of the jQuery live method to use the new on method so the calendar will keep working when WordPress upgrades to jQuery 1.9.
+
+The Mozilla team is now using the Editorial Calendar in one of their blogs and performed a security review of the calendar.  They found a couple of potential issues which were fixed in this release.  https://bugzilla.mozilla.org/show_bug.cgi?id=738112
+
+The Editorial Calendar is now stripping all tags out of post titles created from the calendar.  This fixes a potential security issue found by the Mozilla security testing team.  https://bugzilla.mozilla.org/show_bug.cgi?id=738112
+
+We are now preventing a potential SQL injection attack with the start date and end date filter when querying posts.  This fixes a potential security issue found by the Mozilla security testing team.  https://bugzilla.mozilla.org/show_bug.cgi?id=738112
+
+We are adding an extra check to make sure that authors can't delete a post created by another author.  This fixes a potential security issue found by the Mozilla security testing team.  https://bugzilla.mozilla.org/show_bug.cgi?id=738112
 
 = 2.6 = 
 

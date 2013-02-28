@@ -323,6 +323,13 @@ html, body, div, span, applet, object, iframe, h1, h2, h3, h4, h5, h6, p, blockq
 
 .day.today .daylabel {
     color: white;
+    text-shadow:0 -1px 0 rgba(0,0,0,0.3);
+    background:#8cc1e9;
+    background-image:-webkit-gradient(linear,left bottom,left top,from(#72a7cf),to(#8cc1e9));
+    background-image:-webkit-linear-gradient(bottom,#72a7cf,#8cc1e9);
+    background-image:-moz-linear-gradient(bottom,#72a7cf,#8cc1e9);
+    background-image:-o-linear-gradient(bottom,#72a7cf,#8cc1e9);
+    background-image:linear-gradient(to top,#72a7cf,#8cc1e9);
 }
 
 .today .daynewlink {

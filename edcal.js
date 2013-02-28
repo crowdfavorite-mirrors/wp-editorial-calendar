@@ -399,7 +399,7 @@ var edcal = {
         }
         jQuery(window).bind('resize', resizeWindow);*/
 
-        jQuery('#newPostScheduleButton').live('click', function(evt) {
+        jQuery('#newPostScheduleButton').on('click', function(evt) {
             // if the button is disabled, don't do anything
             if (jQuery(this).hasClass('disabled')) {
                 return false;
@@ -431,7 +431,7 @@ var edcal = {
             edcal.updatePublishButton();
         });
 
-        jQuery('#edcal_weeks_pref').live('keyup', function(evt) {
+        jQuery('#edcal_weeks_pref').on('keyup', function(evt) {
             if (jQuery('#edcal_weeks_pref').val().length > 0) {
                 jQuery('#edcal_applyoptions').removeClass('disabled');
             } else {

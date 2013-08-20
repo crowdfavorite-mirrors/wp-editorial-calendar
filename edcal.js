@@ -2578,7 +2578,7 @@ var edcal = {
      */
     output: function(msg) {
         if (window.console) {
-            console.info(msg);
+            console.log(msg);
         }
     },
 

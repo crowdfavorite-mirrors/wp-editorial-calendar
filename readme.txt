@@ -2,8 +2,8 @@
 Contributors: cvernon, justinstresslimit, jkudish, MaryVogt, zgrossbart
 Tags: posts, post, calendar, AJAX, admin, administration
 Requires at least: 2.8.5
-Tested up to: 3.6
-Stable tag: 2.8
+Tested up to: 3.7.1
+Stable tag: 2.9
 
 The Editorial Calendar makes it possible to see all your posts and drag and drop them to manage your blog.
 
@@ -172,6 +172,10 @@ Moving published posts can cause problems with some RSS feeds and is generally n
 7. Use the new unscheduled drafts section to manage drafts before you schedule them.
 
 == Changelog ==
+
+= 2.9 = 
+
+Version 2.9 is another testing release.  This version makes sure everything works great with WordPress 3.7.1.
 
 = 2.8 = 
 

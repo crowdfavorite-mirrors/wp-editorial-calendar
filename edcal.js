@@ -1048,7 +1048,7 @@ var edcal = {
                         edcal.showError(edcal.checksum_error);
                     }
                 } else {
-                    edcal.output('Finished deleting the post: "' + res.post.title + '"');
+                    edcal.output('Finished deleting the post: "' + res.post.title + '" with id:' + res.post.id);
                 }
 
                 if (callback) {
@@ -1446,15 +1446,16 @@ var edcal = {
      * Removes a post from the HTML and the posts cache.
      */
     removePostItem: function(/*string*/ dayobjId, /*string*/ postId) {
-         //edcal.output('removePostItem(' + dayobjId + ', ' + postId + ')');
+         edcal.output('removePostItem(' + dayobjId + ', ' + postId + ')');
          if (edcal.findPostForId(dayobjId, postId)) {
              for (var i = 0; i < edcal.posts[dayobjId].length; i++) {
                  if (edcal.posts[dayobjId][i] && 'post-' + edcal.posts[dayobjId][i].id === postId) {
-                     edcal.posts[dayobjId][i] = null;
-                     jQuery('#' + postId).remove();
+                     edcal.posts[dayobjId][i] = null;                     
                  }
              }
          }
+         
+         jQuery('#' + postId).remove();
     },
 
     /*

@@ -567,6 +567,10 @@ TinyMCE Rich Editor and Media buttons are not currently used
     background-position: right -1px;
 }
 
+div.metabox-prefs {
+    padding-left: 10px;
+}
+
 #contextual-help-wrap {
     margin-left: 8px;
     padding: 0 0 10px;

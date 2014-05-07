@@ -1,9 +1,9 @@
 === Editorial Calendar ===
 Contributors: cvernon, justinstresslimit, jkudish, MaryVogt, zgrossbart
 Tags: posts, post, calendar, AJAX, admin, administration
-Requires at least: 2.8.5
-Tested up to: 3.8
-Stable tag: 3.0
+Requires at least: 3.0
+Tested up to: 3.9
+Stable tag: 3.1.1
 
 The Editorial Calendar makes it possible to see all your posts and drag and drop them to manage your blog.
 
@@ -161,6 +161,20 @@ No.  The calendar is only an administration tool.  None of your readers will kno
 
 Moving published posts can cause problems with some RSS feeds and is generally not a very popular thing to do.  The calendar only allows you to move scheduled and draft posts.
 
+= Can I change post colors or styles in the calendar? =
+
+You can style the posts in the calendar with CSS on your blog.  The calendar adds a new CSS class to your post for every catalog.  The class is based on the slug for the category.  
+
+For example, if you have a category named "My Category" you might have a slug for it named "my-category".  Then you can make all posts with that category show up as red in the calendar with CSS like this:
+
+<pre>
+.post.my-category {
+    color: red;
+}
+</pre>
+
+You can use any CSS properties to change posts in the calendar based on the post category.
+
 == Screenshots ==
 
 1. The calendar integrates seamlessly into the WordPress administration console
@@ -172,6 +186,16 @@ Moving published posts can cause problems with some RSS feeds and is generally n
 7. Use the new unscheduled drafts section to manage drafts before you schedule them.
 
 == Changelog ==
+
+= 3.1.1 = 
+
+This version is exactly the same as version 3.1, but it's been fully tested against WordPress 3.9.
+
+= 3.1 = 
+
+The calendar now adds the category slugs for each post as a class for the line of that post in the calendar.
+
+The calendar has a new option called edcal_custom_posts_public to control if the calendar shows for private custom posts or not.
 
 = 3.0 = 
 

@@ -1644,7 +1644,7 @@ var edcal = {
          if (edcal.isPostMovable(post)) {
              return '<li onmouseover="edcal.showActionLinks(\'post-' + post.id + '\');" ' +
                  'onmouseout="edcal.hideActionLinks(\'post-' + post.id + '\');" ' +
-                 'id="post-' + post.id + '" class="post ' + post.status + ' ' + edcal.getPostEditableClass(post) + '"><div class="postlink ' + classString + '">' + 
+                 'id="post-' + post.id + '" class="post ' + post.status + ' ' + edcal.getPostEditableClass(post) + post.slugs + '"><div class="postlink ' + classString + '">' + 
                      '<span>' + posttitle + '</span>' +
                    '</div>' +
                  '<div class="postactions">' +

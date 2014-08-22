@@ -2,8 +2,8 @@
 Contributors: cvernon, justinstresslimit, jkudish, MaryVogt, zgrossbart
 Tags: posts, post, calendar, AJAX, admin, administration
 Requires at least: 3.0
-Tested up to: 3.9
-Stable tag: 3.1.1
+Tested up to: 3.9.2
+Stable tag: 3.2
 
 The Editorial Calendar makes it possible to see all your posts and drag and drop them to manage your blog.
 
@@ -175,6 +175,14 @@ For example, if you have a category named "My Category" you might have a slug fo
 
 You can use any CSS properties to change posts in the calendar based on the post category.
 
+= Can I change default post time or status when creating new posts? =
+
+The calendar allows you to create new posts.  The default time for this new posts is 10:00 AM and the default status for this new posts is draft.  You can change those values by specifying options in your blog.
+
+The `edcal_default_time` property controls the default time for new posts in the calendar.  This value is in 24 hour time and you can change it by specifying the time in a format like `11:00`.
+
+The `edcal_default_status` property controls the default status for new posts in the calendar.  The allowed values are `draft`, `future`, and `pending` for the statuses of `Draft`, `Scheduled`, and `Pending Review` respectively.  This value will only be used if the current user doesn't have access to change that status.  For example, if you're an author then you can't use a default status of `pending` since you aren't allowed to publish posts.
+
 == Screenshots ==
 
 1. The calendar integrates seamlessly into the WordPress administration console
@@ -186,6 +194,12 @@ You can use any CSS properties to change posts in the calendar based on the post
 7. Use the new unscheduled drafts section to manage drafts before you schedule them.
 
 == Changelog ==
+
+= 3.2 = 
+
+We now have a new option for specifying the default status of a new post and documented the option for specifying the default time of a post.
+
+The calendar is now doing a better job of reporting errors when it can't parse the post information from the blog.
 
 = 3.1.1 = 
 

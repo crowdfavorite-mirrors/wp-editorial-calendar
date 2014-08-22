@@ -18,7 +18,7 @@
 /*
 Plugin Name: WordPress Editorial Calendar
 Description: The Editorial Calendar makes it possible to see all your posts and drag and drop them to manage your blog.
-Version: 3.1.1
+Version: 3.2
 Author: Colin Vernon, Justin Evans, Joachim Kudish, Mary Vogt, and Zack Grossbart
 Author URI: http://www.zackgrossbart.com
 Plugin URI: http://stresslimitdesign.com/editorial-calendar-plugin
@@ -74,6 +74,11 @@ class EdCal {
          * we are using 10am, but this could become an option later.
          */
         $this->default_time = get_option("edcal_default_time") != "" ? get_option("edcal_default_time") : '10:00';
+         
+         /*
+          * This is the default status used for creating new posts.
+          */
+        $this->default_status = get_option("edcal_default_status") != "" ? get_option("edcal_default_status") : 'draft';
         
         /*
          * We use these variables to hold the post dates for the filter when 
@@ -250,6 +255,7 @@ class EdCal {
                 edcal.timeFormat = "<?php echo(get_option("time_format")); ?>";
                 edcal.previewDateFormat = "MMMM d";
                 edcal.defaultTime = "<?php echo $this->default_time; ?>";
+                edcal.defaultStatus = "<?php echo $this->default_status; ?>";
     
                 /*
                  * We want to show the day of the first day of the week to match the user's 
@@ -318,6 +324,7 @@ class EdCal {
                 edcal.str_opt_status = <?php echo($this->edcal_json_encode(__('Status', 'editorial-calendar'))) ?>;
                 edcal.str_opt_time = <?php echo($this->edcal_json_encode(__('Time of day', 'editorial-calendar'))) ?>;
                 edcal.str_fatal_error = <?php echo($this->edcal_json_encode(__('An error occurred while loading the calendar: ', 'editorial-calendar'))) ?>;
+                edcal.str_fatal_parse_error = <?php echo($this->edcal_json_encode(__('<br /><br />The calendar was not able to parse the data your blog returned about the posts.  This error is most likely caused by a conflict with another plugin on your blog.  The actual parse error was:<br/><br/> ', 'editorial-calendar'))) ?>;
                 
                 edcal.str_weekserror = <?php echo($this->edcal_json_encode(__('The calendar can only show between 1 and 8 weeks at a time.', 'editorial-calendar'))) ?>;
                 edcal.str_weekstt = <?php echo($this->edcal_json_encode(__('Select the number of weeks for the calendar to show.', 'editorial-calendar'))) ?>;

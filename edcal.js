@@ -1343,7 +1343,7 @@ var edcal = {
             jQuery('#edcal-status').val(post.status);
             edcal.updatePublishButton();
         } else {
-            if (0 != jQuery('#edcal-status option[value=' + edcal.defaultStatus + ']').length) {
+            if (0 !== jQuery('#edcal-status option[value=' + edcal.defaultStatus + ']').length) {
                 /*
                  * We want to use the default status if it exists in the list and we'll
                  * default to the draft status if the default one is in the list.
@@ -1847,6 +1847,7 @@ var edcal = {
      * This is the full list of start of the week days from unicode.org
      * http://unicode.org/repos/cldr/trunk/common/supplemental/supplementalData.xml
      */
+    /* jshint maxcomplexity: 80 */
     nextStartOfWeek: function(/*date*/ date) {
          date = date.clone();
          if (edcal.startOfWeek === null) {
@@ -1943,6 +1944,8 @@ var edcal = {
 
          return date.next().sunday().add(edcal.startOfWeek).days();
     },
+
+    /* jshint maxcomplexity: 14 */
 
     /*
      * Just a little helper function to tell if a given string (str)
@@ -2652,9 +2655,9 @@ var edcal = {
     },
     
     chineseAposWorkaround: function(/*String*/ dateString) {
-        if (Date.CultureInfo.name.indexOf("zh") === 0 ||
-            Date.CultureInfo.name.indexOf("ja") === 0) {
-            return dateString.replace(/'/g, "");
+        if (Date.CultureInfo.name.indexOf('zh') === 0 ||
+            Date.CultureInfo.name.indexOf('ja') === 0) {
+            return dateString.replace(/'/g, '');
         }
         return dateString;
     }

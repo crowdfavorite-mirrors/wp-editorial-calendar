@@ -2,8 +2,8 @@
 Contributors: cvernon, justinstresslimit, jkudish, MaryVogt, zgrossbart
 Tags: posts, post, calendar, AJAX, admin, administration
 Requires at least: 3.0
-Tested up to: 4.1
-Stable tag: 3.4
+Tested up to: 4.2
+Stable tag: 3.5
 
 The Editorial Calendar makes it possible to see all your posts and drag and drop them to manage your blog.
 
@@ -109,7 +109,7 @@ The editorial calendar follows the Week Starts On preference on the WordPress Ge
 
 = What languages does the calendar support? =
 
-The calendar is available in Brazilian Portuguese, Croatian, Czech, Dutch, English, French, German, Greek, Hebrew, Italian, Japanese, Lithuanian, Norwegian, Polish, Russian, Spanish, and Swedish. 
+The calendar is available in Brazilian Portuguese, Croatian, Czech, Danish, Dutch, English, French, German, Greek, Hebrew, Italian, Japanese, Lithuanian, Norwegian, Polish, Russian, Spanish, and Swedish. 
 
 = Can I add new languages? =
 
@@ -194,6 +194,10 @@ The `edcal_default_status` property controls the default status for new posts in
 7. Use the new unscheduled drafts section to manage drafts before you schedule them.
 
 == Changelog ==
+
+= 3.5 =
+
+The calendar has now been translated into Turkish and updated for WordPress version 4.2.
 
 = 3.4 = 
 
